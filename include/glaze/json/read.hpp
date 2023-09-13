@@ -47,8 +47,13 @@ namespace glz
          GLZ_ALWAYS_INLINE static void op(T&& value, Ctx&& ctx, It0&& it, It1&& end) noexcept
          {
             if constexpr (std::is_const_v<std::remove_reference_t<T>>) {
-               // do not read anything into the const value
-               skip_value<Opts>(std::forward<Ctx>(ctx), std::forward<It0>(it), std::forward<It1>(end));
+               if constexpr (Opts.error_on_const_read) {
+                  ctx.error = error_code::attempt_const_read;
+               }
+               else {
+                  // do not read anything into the const value
+                  skip_value<Opts>(std::forward<Ctx>(ctx), std::forward<It0>(it), std::forward<It1>(end));
+               }
             }
             else {
                from_json<std::remove_cvref_t<T>>::template op<Opts>(std::forward<T>(value), std::forward<Ctx>(ctx),
@@ -825,7 +830,7 @@ namespace glz
 
       // for set types
       template <class T>
-         requires(array_t<T> && !emplace_backable<T> && !resizeable<T> && emplaceable<T>)
+         requires(readable_array_t<T> && !emplace_backable<T> && !resizeable<T> && emplaceable<T>)
       struct from_json<T>
       {
          template <auto Options>
@@ -873,7 +878,7 @@ namespace glz
       };
 
       template <class T>
-         requires(array_t<T> && (emplace_backable<T> || !resizeable<T>) && !emplaceable<T>)
+         requires(readable_array_t<T> && (emplace_backable<T> || !resizeable<T>) && !emplaceable<T>)
       struct from_json<T>
       {
          template <auto Options>
@@ -924,8 +929,9 @@ namespace glz
                }
                else if (*it == ']') {
                   ++it;
-                  if constexpr (resizeable<T>) {
-                     value.resize(i + 1);
+                  if constexpr (erasable<T>) {
+                     value.erase(value_it,
+                                 value.end()); // use erase rather than resize for non-default constructible elements
 
                      if constexpr (Opts.shrink_to_fit) {
                         value.shrink_to_fit();
@@ -1030,7 +1036,7 @@ namespace glz
       }
 
       template <class T>
-         requires array_t<T> && (!emplace_backable<T> && resizeable<T>)
+         requires readable_array_t<T> && (!emplace_backable<T> && resizeable<T>)
       struct from_json<T>
       {
          template <auto Options>
@@ -1458,7 +1464,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Options, string_literal tag = "">
-         GLZ_FLATTEN static void op(auto& value, is_context auto&& ctx, auto&& it, auto&& end)
+         GLZ_FLATTEN static void op(auto&& value, is_context auto&& ctx, auto&& it, auto&& end)
          {
             if constexpr (!Options.opening_handled) {
                if constexpr (!Options.ws_handled) {

@@ -102,6 +102,47 @@ namespace glz
          }
       };
 
+      template <class T>
+         requires complex_t<T>
+      struct from_binary<T>
+      {
+         template <auto Opts>
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, auto&& it, auto&&) noexcept
+         {
+            constexpr uint8_t header = tag::extensions | 0b00011'000;
+
+            const auto tag = uint8_t(*it);
+            if (tag != header) {
+               ctx.error = error_code::syntax_error;
+               return;
+            }
+            ++it;
+
+            using V = typename T::value_type;
+            constexpr uint8_t type = std::floating_point<V> ? 0 : (std::is_signed_v<V> ? 0b000'01'000 : 0b000'10'000);
+            constexpr uint8_t complex_number = 0;
+            constexpr uint8_t complex_header = complex_number | type | (byte_count<V> << 5);
+
+            const auto complex_tag = uint8_t(*it);
+            if (complex_tag != complex_header) {
+               ctx.error = error_code::syntax_error;
+               return;
+            }
+            ++it;
+
+            std::memcpy(&value, &(*it), 2 * sizeof(V));
+            std::advance(it, 2 * sizeof(V));
+         }
+
+         template <auto Opts>
+         GLZ_ALWAYS_INLINE static void no_header(auto&& value, is_context auto&&, auto&& it, auto&&) noexcept
+         {
+            using V = std::decay_t<T>;
+            std::memcpy(&value, &(*it), sizeof(V));
+            std::advance(it, sizeof(V));
+         }
+      };
+
       template <boolean_like T>
       struct from_binary<T>
       {
@@ -109,7 +150,7 @@ namespace glz
          GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, auto&& it, auto&& /* end */) noexcept
          {
             const auto tag = uint8_t(*it);
-            if ((tag & 0b00000'111) != tag::boolean) {
+            if ((tag & 0b0000'1111) != tag::boolean) {
                ctx.error = error_code::syntax_error;
                return;
             }
@@ -156,7 +197,7 @@ namespace glz
          {
             constexpr uint8_t header = tag::extensions | 0b00001'000;
             const auto tag = uint8_t(*it);
-            if (tag != header) {
+            if (tag != header) [[unlikely]] {
                ctx.error = error_code::syntax_error;
                return;
             }
@@ -178,7 +219,7 @@ namespace glz
          {
             using V = typename std::decay_t<T>::value_type;
 
-            constexpr uint8_t header = tag::string | (byte_count<V> << 3);
+            constexpr uint8_t header = tag::string;
 
             const auto tag = uint8_t(*it);
             if (tag != header) {
@@ -222,7 +263,7 @@ namespace glz
          }
       };
 
-      template <array_t T>
+      template <readable_array_t T>
       struct from_binary<T> final
       {
          template <auto Opts>
@@ -236,7 +277,7 @@ namespace glz
                constexpr uint8_t type = uint8_t(3) << 3;
                constexpr uint8_t header = tag::typed_array | type;
 
-               if (tag != header) {
+               if (tag != header) [[unlikely]] {
                   ctx.error = error_code::syntax_error;
                   return;
                }
@@ -298,10 +339,9 @@ namespace glz
             else if constexpr (str_t<V>) {
                constexpr uint8_t type = uint8_t(3) << 3;
                constexpr uint8_t string_indicator = uint8_t(1) << 5;
-               using char_type = std::decay_t<decltype(*std::declval<V>().data())>;
-               constexpr uint8_t header = tag::typed_array | type | string_indicator | (byte_count<char_type> << 6);
+               constexpr uint8_t header = tag::typed_array | type | string_indicator;
 
-               if (tag != header) {
+               if (tag != header) [[unlikely]] {
                   ctx.error = error_code::syntax_error;
                   return;
                }
@@ -328,6 +368,47 @@ namespace glz
 
                   std::memcpy(x.data(), &*it, length);
                   std::advance(it, length);
+               }
+            }
+            else if constexpr (complex_t<V>) {
+               constexpr uint8_t header = tag::extensions | 0b00011'000;
+               if (tag != header) [[unlikely]] {
+                  ctx.error = error_code::syntax_error;
+                  return;
+               }
+               ++it;
+
+               using X = typename V::value_type;
+               constexpr uint8_t complex_array = 1;
+               constexpr uint8_t type =
+                  std::floating_point<X> ? 0 : (std::is_signed_v<X> ? 0b000'01'000 : 0b000'10'000);
+               constexpr uint8_t complex_header = complex_array | type | (byte_count<X> << 5);
+               const auto complex_tag = uint8_t(*it);
+               if (complex_tag != complex_header) {
+                  ctx.error = error_code::syntax_error;
+                  return;
+               }
+               ++it;
+
+               const auto n = int_from_compressed(it, end);
+
+               if constexpr (resizeable<T>) {
+                  value.resize(n);
+
+                  if constexpr (Opts.shrink_to_fit) {
+                     value.shrink_to_fit();
+                  }
+               }
+
+               if constexpr (contiguous<T>) {
+                  std::memcpy(value.data(), &*it, n * sizeof(V));
+                  std::advance(it, n * sizeof(V));
+               }
+               else {
+                  for (auto&& x : value) {
+                     std::memcpy(&x, &*it, sizeof(V));
+                     std::advance(it, sizeof(V));
+                  }
                }
             }
             else {
@@ -363,11 +444,11 @@ namespace glz
             using Key = typename T::first_type;
 
             constexpr uint8_t type = str_t<Key> ? 0 : (std::is_signed_v<Key> ? 0b000'01'000 : 0b000'10'000);
-            constexpr uint8_t byte_count = str_t<Key> ? 1 : sizeof(Key);
-            constexpr uint8_t header = tag::object | type | (byte_count << 5);
+            constexpr uint8_t byte_cnt = str_t<Key> ? 0 : byte_count<Key>;
+            constexpr uint8_t header = tag::object | type | (byte_cnt << 5);
 
             const auto tag = uint8_t(*it);
-            if (tag != header) {
+            if (tag != header) [[unlikely]] {
                ctx.error = error_code::syntax_error;
                return;
             }
@@ -394,11 +475,11 @@ namespace glz
             using Key = typename T::key_type;
 
             constexpr uint8_t type = str_t<Key> ? 0 : (std::is_signed_v<Key> ? 0b000'01'000 : 0b000'10'000);
-            constexpr uint8_t byte_count = str_t<Key> ? 1 : sizeof(Key);
-            constexpr uint8_t header = tag::object | type | (byte_count << 5);
+            constexpr uint8_t byte_cnt = str_t<Key> ? 0 : byte_count<Key>;
+            constexpr uint8_t header = tag::object | type | (byte_cnt << 5);
 
             const auto tag = uint8_t(*it);
-            if (tag != header) {
+            if (tag != header) [[unlikely]] {
                ctx.error = error_code::syntax_error;
                return;
             }
@@ -478,12 +559,11 @@ namespace glz
          template <auto Opts>
          GLZ_FLATTEN static void op(auto&& value, is_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
-            constexpr uint8_t type = 0;
-            constexpr uint8_t byte_count = 1;
-            constexpr uint8_t header = tag::object | type | (byte_count << 5);
+            constexpr uint8_t type = 0; // string key
+            constexpr uint8_t header = tag::object | type;
 
             const auto tag = uint8_t(*it);
-            if (tag != header) {
+            if (tag != header) [[unlikely]] {
                ctx.error = error_code::syntax_error;
                return;
             }
@@ -576,7 +656,7 @@ namespace glz
    {
       T value{};
       const auto pe = read<opts{.format = binary}>(value, std::forward<Buffer>(buffer));
-      if (pe) {
+      if (pe) [[unlikely]] {
          return unexpected(pe);
       }
       return value;
@@ -590,7 +670,7 @@ namespace glz
 
       const auto file_error = file_to_buffer(buffer, ctx.current_file);
 
-      if (bool(file_error)) {
+      if (bool(file_error)) [[unlikely]] {
          return parse_error{file_error};
       }
 

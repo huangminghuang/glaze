@@ -26,7 +26,7 @@ namespace glz
       };
 
       template <class T>
-         requires array_t<T> && (emplace_backable<T> || !resizeable<T>)
+         requires readable_array_t<T> && (emplace_backable<T> || !resizeable<T>)
       struct from_ndjson<T>
       {
          template <auto Opts>
@@ -69,12 +69,14 @@ namespace glz
             for (size_t i = 0; i < n; ++i) {
                read<json>::op<Opts>(*value_it++, ctx, it, end);
                if (it == end) {
-                  value.resize(i + 1);
+                  if constexpr (erasable<T>) {
+                     value.erase(value_it,
+                                 value.end()); // use erase rather than resize for non-default constructible elements
 
-                  if constexpr (Opts.shrink_to_fit) {
-                     value.shrink_to_fit();
+                     if constexpr (Opts.shrink_to_fit) {
+                        value.shrink_to_fit();
+                     }
                   }
-
                   return;
                }
 
@@ -166,7 +168,7 @@ namespace glz
          }
       };
 
-      template <array_t T>
+      template <writable_array_t T>
       struct to_ndjson<T>
       {
          template <auto Opts, class... Args>

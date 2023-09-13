@@ -19,6 +19,7 @@
 #include "glaze/core/meta.hpp"
 #include "glaze/util/bit_array.hpp"
 #include "glaze/util/expected.hpp"
+#include "glaze/util/fixed_string.hpp"
 #include "glaze/util/for_each.hpp"
 #include "glaze/util/hash_map.hpp"
 #include "glaze/util/murmur.hpp"
@@ -29,6 +30,14 @@
 
 namespace glz
 {
+   // Allows developers to add `static constexpr auto custom_read = true;` to their glz::meta to prevent ambiguous
+   // partial specialization for custom parsers
+   template <class T>
+   concept custom_read = requires { meta<T>::custom_read == true; };
+
+   template <class T>
+   concept custom_write = requires { meta<T>::custom_write == true; };
+
    template <class... T>
    struct obj final
    {
@@ -281,11 +290,36 @@ namespace glz
       template <class T>
       concept num_t = std::floating_point<std::decay_t<T>> || int_t<T>;
 
+      template <typename T>
+      concept complex_t = requires(T a, T b) {
+                             {
+                                a.real()
+                                } -> std::convertible_to<typename T::value_type>;
+                             {
+                                a.imag()
+                                } -> std::convertible_to<typename T::value_type>;
+                             {
+                                T(a.real(), a.imag())
+                                } -> std::same_as<T>;
+                             {
+                                a + b
+                                } -> std::same_as<T>;
+                             {
+                                a - b
+                                } -> std::same_as<T>;
+                             {
+                                a* b
+                                } -> std::same_as<T>;
+                             {
+                                a / b
+                                } -> std::same_as<T>;
+                          };
+
       template <class T>
       concept constructible = requires { meta<std::decay_t<T>>::construct; } || local_construct_t<std::decay_t<T>>;
 
       template <class T>
-      concept complex_t = glaze_t<std::decay_t<T>>;
+      concept meta_value_t = glaze_t<std::decay_t<T>>;
 
       template <class T>
       concept str_t = !
@@ -325,11 +359,11 @@ namespace glz
 
       template <class T>
       concept readable_map_t = !
-      complex_t<T> && !str_t<T> && range<T> && pair_t<range_value_t<T>> && map_subscriptable<T>;
+      custom_read<T> && !meta_value_t<T> && !str_t<T> && range<T> && pair_t<range_value_t<T>> && map_subscriptable<T>;
 
       template <class T>
       concept writable_map_t = !
-      complex_t<T> && !str_t<T> && range<T> && pair_t<range_value_t<T>>;
+      custom_write<T> && !meta_value_t<T> && !str_t<T> && range<T> && pair_t<range_value_t<T>>;
 
       template <class Map>
       concept heterogeneous_map = requires {
@@ -340,7 +374,13 @@ namespace glz
                                   };
 
       template <class T>
-      concept array_t = (!complex_t<T> && !str_t<T> && !(readable_map_t<T> || writable_map_t<T>) && range<T>);
+      concept array_t = (!meta_value_t<T> && !str_t<T> && !(readable_map_t<T> || writable_map_t<T>) && range<T>);
+
+      template <class T>
+      concept readable_array_t = (!custom_read<T> && array_t<T>);
+
+      template <class T>
+      concept writable_array_t = (!custom_write<T> && array_t<T>);
 
       template <class T>
       concept emplace_backable = requires(T container) {
@@ -365,6 +405,9 @@ namespace glz
 
       template <class T>
       concept resizeable = requires(T container) { container.resize(0); };
+
+      template <class T>
+      concept erasable = requires(T container) { container.erase(container.cbegin(), container.cend()); };
 
       template <class T>
       concept fixed_array_value_t = array_t<std::decay_t<decltype(std::declval<T>()[0])>> && !
@@ -436,7 +479,7 @@ namespace glz
                            std::tuple_size<T>::value;
                            glz::tuplet::get<0>(t);
                         } && !
-      complex_t<T> && !range<T>;
+      meta_value_t<T> && !range<T>;
 
       template <class T>
       concept always_null_t =
@@ -444,12 +487,12 @@ namespace glz
 
       template <class T>
       concept nullable_t = !
-      complex_t<T> && !str_t<T> && requires(T t) {
-                                      bool(t);
-                                      {
-                                         *t
+      meta_value_t<T> && !str_t<T> && requires(T t) {
+                                         bool(t);
+                                         {
+                                            *t
+                                         };
                                       };
-                                   };
 
       template <class T>
       concept null_t = nullable_t<T> || always_null_t<T>;
@@ -954,6 +997,7 @@ struct glz::meta<glz::error_code>
                 "syntax_error", glz::error_code::syntax_error, //
                 "key_not_found", glz::error_code::key_not_found, //
                 "unexpected_enum", glz::error_code::unexpected_enum, //
+                "attempt_const_read", glz::error_code::attempt_const_read, //
                 "attempt_member_func_read", glz::error_code::attempt_member_func_read, //
                 "attempt_read_hidden", glz::error_code::attempt_read_hidden, //
                 "invalid_nullable_read", glz::error_code::invalid_nullable_read, //

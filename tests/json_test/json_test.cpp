@@ -636,6 +636,12 @@ suite enum_types = [] {
       glz::write_json(color, buffer);
       expect(buffer == "\"Green\"");
    };
+
+   "invalid enum"_test = [] {
+      Color color = Color::Red;
+      expect(glz::read_json(color, "\"Silver\"") == glz::error_code::unexpected_enum);
+      expect(color == Color::Red);
+   };
 };
 
 suite user_types = [] {
@@ -4943,6 +4949,13 @@ suite number_reading = [] {
       buffer = "6E19";
       expect(glz::read_json(i, buffer) == glz::error_code::parse_number_failure);
    };
+
+   "long float double"_test = [] {
+      std::string_view buffer{"0.00000000000000000000000"};
+      double d{3.14};
+      expect(!glz::read_json(d, buffer));
+      expect(d == 0.0);
+   };
 };
 
 suite whitespace_testing = [] {
@@ -4960,6 +4973,61 @@ suite read_as_json_raw = [] {
       my_struct obj{};
       expect(glz::write_as_json(obj, "/i", b.data()));
       expect(std::string_view{b.data()} == "287");
+   };
+};
+
+suite const_read_error = [] {
+   "const_read_error"_test = [] {
+      const std::string hello = "world";
+      std::string s = R"(explode)";
+      constexpr glz::opts opts{.error_on_const_read = true};
+      expect(glz::read<opts>(hello, s) == glz::error_code::attempt_const_read);
+   };
+};
+
+struct test_mapping_t
+{
+   int64_t id;
+   double latitude;
+   double longitude;
+};
+
+struct coordinates_t
+{
+   double* latitude;
+   double* longitude;
+};
+
+template <>
+struct glz::meta<coordinates_t>
+{
+   using T = coordinates_t;
+   static constexpr auto value = object("latitude", &T::latitude, "longitude", &T::longitude);
+};
+
+template <>
+struct glz::meta<test_mapping_t>
+{
+   using T = test_mapping_t;
+   static constexpr auto value = object("id", &T::id, "coordinates", [](auto& self) {
+      return coordinates_t{&self.latitude, &self.longitude};
+   });
+};
+
+suite mapping_struct = [] {
+   "mapping_struct"_test = [] {
+      test_mapping_t obj{};
+      std::string s = R"({
+  "id": 12,
+  "coordinates": {
+    "latitude": 1.23456789,
+    "longitude": 9.87654321
+  }
+})";
+      expect(!glz::read_json(obj, s));
+      expect(obj.id == 12);
+      expect(obj.latitude == 1.23456789);
+      expect(obj.longitude == 9.87654321);
    };
 };
 
