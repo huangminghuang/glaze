@@ -1,8 +1,8 @@
-# Tagged Binary Messages (Crusher)
+# Tagged Binary Messages (BEVE)
 
 Glaze provides a tagged binary format to send and receive messages like JSON, but with significantly improved performance and message size savings.
 
-The binary specification is known as [EVE](https://github.com/stephenberry/eve).
+The binary specification is known as [BEVE](https://github.com/stephenberry/beve).
 
 **Write Binary**
 
