@@ -2000,9 +2000,13 @@ namespace glz
             }
             else {
                if (!value) {
-                  if constexpr (is_specialization_v<T, std::optional>)
-                     value = std::make_optional<typename T::value_type>();
-                  else if constexpr (is_specialization_v<T, std::unique_ptr>)
+                  if constexpr (is_specialization_v<T, std::optional>) {
+                     if constexpr ( requires { value.emplace(); }) {
+                        value.emplace();
+                     } else {
+                        value = typename T::value_type{};
+                     }
+                  } else if constexpr (is_specialization_v<T, std::unique_ptr>)
                      value = std::make_unique<typename T::element_type>();
                   else if constexpr (is_specialization_v<T, std::shared_ptr>)
                      value = std::make_shared<typename T::element_type>();
