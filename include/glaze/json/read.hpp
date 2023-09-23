@@ -40,6 +40,13 @@ namespace glz
       struct from_json
       {};
 
+      template <auto Opts, class T, class Ctx, class It0, class It1>
+      concept read_json_invocable =
+         requires(T&& value, Ctx&& ctx, It0&& it, It1&& end) {
+            from_json<std::remove_cvref_t<T>>::template op<Opts>(std::forward<T>(value), std::forward<Ctx>(ctx),
+                                                                 std::forward<It0>(it), std::forward<It1>(end));
+         };
+
       template <>
       struct read<json>
       {
@@ -56,8 +63,14 @@ namespace glz
                }
             }
             else {
-               from_json<std::remove_cvref_t<T>>::template op<Opts>(std::forward<T>(value), std::forward<Ctx>(ctx),
-                                                                    std::forward<It0>(it), std::forward<It1>(end));
+               if constexpr (read_json_invocable<Opts, T, Ctx, It0, It1>) {
+                  using V = std::remove_cvref_t<T>;
+                  from_json<V>::template op<Opts>(std::forward<T>(value), std::forward<Ctx>(ctx), std::forward<It0>(it),
+                                                  std::forward<It1>(end));
+               }
+               else {
+                  static_assert(false_v<T>, "Glaze metadata is probably needed for your type");
+               }
             }
          }
       };
@@ -1372,7 +1385,7 @@ namespace glz
                            return key;
                         }
                      }
-                     ctx.error = error_code::key_not_found;
+                     ctx.error = error_code::unknown_key;
                      return {};
                   }
                   else {
@@ -1514,19 +1527,22 @@ namespace glz
                   if (bool(ctx.error)) [[unlikely]]
                      return;
 
-                  skip_ws<Opts>(ctx, it, end);
-                  if (bool(ctx.error)) [[unlikely]]
-                     return;
-                  match<':'>(ctx, it, end);
-                  if (bool(ctx.error)) [[unlikely]]
-                     return;
-                  skip_ws<Opts>(ctx, it, end);
-                  if (bool(ctx.error)) [[unlikely]]
-                     return;
+                  // Because parse_object_key does not necessarily return a valid JSON key, the logic for handling
+                  // whitespace and the colon must run after checking if the key exists
 
                   static constexpr auto frozen_map = detail::make_map<T, Opts.use_hash_comparison>();
                   const auto& member_it = frozen_map.find(key);
                   if (member_it != frozen_map.end()) [[likely]] {
+                     skip_ws<Opts>(ctx, it, end);
+                     if (bool(ctx.error)) [[unlikely]]
+                        return;
+                     match<':'>(ctx, it, end);
+                     if (bool(ctx.error)) [[unlikely]]
+                        return;
+                     skip_ws<Opts>(ctx, it, end);
+                     if (bool(ctx.error)) [[unlikely]]
+                        return;
+
                      if constexpr (Opts.error_on_missing_keys) {
                         // TODO: Kludge/hack. Should work but could easily cuase memory issues with small changes.
                         // At the very least if we are going to do this add a get_index method to the maps and call that
@@ -1544,24 +1560,30 @@ namespace glz
                   else [[unlikely]] {
                      if constexpr (Opts.error_on_unknown_keys) {
                         if constexpr (tag.sv().empty()) {
+                           std::advance(it, -key.size());
                            ctx.error = error_code::unknown_key;
                            return;
                         }
                         else if (key != tag.sv()) {
+                           std::advance(it, -key.size());
                            ctx.error = error_code::unknown_key;
                            return;
                         }
-                        else {
-                           skip_value<Opts>(ctx, it, end);
-                           if (bool(ctx.error)) [[unlikely]]
-                              return;
-                        }
                      }
-                     else {
-                        skip_value<Opts>(ctx, it, end);
-                        if (bool(ctx.error)) [[unlikely]]
-                           return;
-                     }
+
+                     skip_ws<Opts>(ctx, it, end);
+                     if (bool(ctx.error)) [[unlikely]]
+                        return;
+                     match<':'>(ctx, it, end);
+                     if (bool(ctx.error)) [[unlikely]]
+                        return;
+                     skip_ws<Opts>(ctx, it, end);
+                     if (bool(ctx.error)) [[unlikely]]
+                        return;
+
+                     skip_value<Opts>(ctx, it, end);
+                     if (bool(ctx.error)) [[unlikely]]
+                        return;
                   }
                }
                else {

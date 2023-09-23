@@ -1729,9 +1729,9 @@ suite write_tests = [] {
       }
       {
          std::string s;
-         long long v{1};
+         long long v{-193582804324766};
          glz::write_json(v, s);
-         expect(s == "1");
+         expect(s == "-193582804324766");
       }
       {
          std::string s;
@@ -1753,9 +1753,9 @@ suite write_tests = [] {
       }
       {
          std::string s;
-         unsigned long long v{1};
+         unsigned long long v{193582804324766};
          glz::write_json(v, s);
-         expect(s == "1");
+         expect(s == "193582804324766");
       }
    };
 
@@ -4963,7 +4963,7 @@ suite whitespace_testing = [] {
       std::string_view buffer{"{\"0\"/\n/"};
       my_struct value{};
       glz::context ctx{};
-      expect(glz::read_json(value, buffer) == glz::error_code::expected_end_comment);
+      expect(glz::read_json(value, buffer) == glz::error_code::unknown_key);
    };
 };
 
@@ -5028,6 +5028,72 @@ suite mapping_struct = [] {
       expect(obj.id == 12);
       expect(obj.latitude == 1.23456789);
       expect(obj.longitude == 9.87654321);
+   };
+};
+
+struct name_t
+{
+   std::string first{};
+   std::string last{};
+
+   GLZ_LOCAL_META(name_t, first, last);
+};
+
+suite error_message_test = [] {
+   "error_message"_test = [] {
+      std::vector<name_t> arr{};
+      std::string s =
+         R"([{"first":"George","last":"Martin"},{"first":"Sally","last":"Adams"},{"first":"Caleb","middle":"Patrick","last":"Boardwalk"},{"first":"James","last":"Brown"}])";
+      const auto error = glz::read_json(arr, s);
+      expect(error == glz::error_code::unknown_key);
+      // const auto formmatted = glz::format_error(error, s);
+   };
+};
+
+struct Person
+{
+   std::string name{};
+   int age{};
+   std::string city{};
+   std::string residence{};
+
+   void getAge(const std::string birthdateStr)
+   {
+      std::tm birthdate = {};
+      std::istringstream ss(birthdateStr);
+      ss >> std::get_time(&birthdate, "%d/%m/%Y");
+
+      if (ss.fail()) {
+         std::cout << "Failed to parse birthdate: " << birthdateStr << "\n";
+      }
+
+      const auto birth = std::chrono::system_clock::from_time_t(std::mktime(&birthdate));
+      const auto age_seconds =
+         std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - birth);
+
+      age = static_cast<int>(age_seconds.count()) / (60 * 60 * 24 * 365);
+   }
+};
+
+template <>
+struct glz::meta<Person>
+{
+   using T = Person;
+   static constexpr auto value =
+      glz::object("name", &T::name, "full_name", &T::name, "age", &T::age, "years_old", &T::age, "date_of_birth",
+                  invoke<&T::getAge>(), "city", &T::city, "residence", &T::residence);
+};
+
+suite function_call = [] {
+   "function_call"_test = [] {
+      Person obj{};
+      std::string s = R"({
+            "full_name": "Brian Smith",
+            "date_of_birth": ["01/01/1990"],
+            "residence": "San Francisco"
+        })";
+      expect(!glz::read_json(obj, s));
+      expect(obj.age == 33);
    };
 };
 

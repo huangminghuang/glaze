@@ -1,6 +1,8 @@
 # Glaze
 One of the fastest JSON libraries in the world. Glaze reads and writes from C++ memory, simplifying interfaces and offering incredible performance.
 
+Glaze also supports binary messages via [BEVE](https://github.com/stephenberry/beve) and CSV support. And, the library has many more useful features for building APIs.
+
 ## Highlights
 
 Glaze requires C++20, using concepts for cleaner code and more helpful errors.
@@ -182,6 +184,10 @@ find_package(glaze REQUIRED)
 
 target_link_libraries(main PRIVATE glaze::glaze)
 ```
+
+### Arch Linux
+
+- AUR packages: [glaze](https://aur.archlinux.org/packages/glaze) and [glaze-git](https://aur.archlinux.org/packages/glaze-git)
 
 ### See this [Example Repository](https://github.com/stephenberry/glaze_example) for how to use Glaze in a new project
 
