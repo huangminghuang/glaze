@@ -1630,13 +1630,22 @@ namespace glz
                         return;
                   }
                   else {
-                     static_assert(std::is_arithmetic_v<k_t> || glaze_enum_t<k_t>);
                      k_t key_value{};
-                     if constexpr (std::is_arithmetic_v<k_t>) {
-                        read<json>::op<opt_true<Opts, &opts::quoted>>(key_value, ctx, it, end);
+
+                     if constexpr (str_t<k_t> || char_t<k_t> || glaze_enum_t<k_t> || Opts.quoted) {
+                        read<json>::op<Opts>(key_value, ctx, it, end);
                      }
                      else {
+                        skip_ws<Opts>(ctx, it, end);
+                        match<'"'>(ctx, it, end);
+                        if (bool(ctx.error)) [[unlikely]]
+                           return;
+
                         read<json>::op<Opts>(key_value, ctx, it, end);
+                        if (bool(ctx.error)) [[unlikely]]
+                           return;
+
+                        match<'"'>(ctx, it, end);
                      }
                      if (bool(ctx.error)) [[unlikely]]
                         return;
@@ -2023,12 +2032,14 @@ namespace glz
             else {
                if (!value) {
                   if constexpr (is_specialization_v<T, std::optional>) {
-                     if constexpr ( requires { value.emplace(); }) {
+                     if constexpr (requires { value.emplace(); }) {
                         value.emplace();
-                     } else {
+                     }
+                     else {
                         value = typename T::value_type{};
                      }
-                  } else if constexpr (is_specialization_v<T, std::unique_ptr>)
+                  }
+                  else if constexpr (is_specialization_v<T, std::unique_ptr>)
                      value = std::make_unique<typename T::element_type>();
                   else if constexpr (is_specialization_v<T, std::shared_ptr>)
                      value = std::make_shared<typename T::element_type>();
