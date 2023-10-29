@@ -30,6 +30,14 @@
 
 namespace glz
 {
+   // write out a string like type without quoting it
+   template <class T>
+   struct raw_t
+   {
+      using value_type = T;
+      T& val;
+   };
+
    // Allows developers to add `static constexpr auto custom_read = true;` to their glz::meta to prevent ambiguous
    // partial specialization for custom parsers
    template <class T>
@@ -483,7 +491,7 @@ namespace glz
 
       template <class T>
       concept always_null_t =
-         std::same_as<T, std::nullptr_t> || std::same_as<T, std::monostate> || std::same_as<T, std::nullopt_t>;
+         std::same_as<T, std::nullptr_t> || std::convertible_to<T, std::monostate> || std::same_as<T, std::nullopt_t>;
 
       template <class T>
       concept nullable_t = !
@@ -495,7 +503,10 @@ namespace glz
                                       };
 
       template <class T>
-      concept null_t = nullable_t<T> || always_null_t<T>;
+      concept raw_nullable = is_specialization_v<T, raw_t> && requires { requires nullable_t<typename T::value_type>; };
+
+      template <class T>
+      concept null_t = nullable_t<T> || always_null_t<T> || raw_nullable<T>;
 
       template <class T>
       concept func_t = requires(T t) {
@@ -643,7 +654,7 @@ namespace glz
          };
 
          if constexpr (n == 0) {
-            static_assert(false_v<T>, "empty object in glz::meta");
+            static_assert(false_v<T>, "Empty object map is illogical. Handle empty upstream.");
          }
          else if constexpr (n == 1) {
             return micro_map1<value_t, meta_sv<T, I>::value...>{
@@ -847,7 +858,7 @@ namespace glz
          return make_variant_id_map_impl<T>(indices, ids_v<T>);
       }
 
-      inline decltype(auto) get_member(auto&& value, auto& member_ptr)
+      inline decltype(auto) get_member(auto&& value, auto&& member_ptr)
       {
          using V = std::decay_t<decltype(member_ptr)>;
          if constexpr (std::is_member_object_pointer_v<V>) {

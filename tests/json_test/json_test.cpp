@@ -3,6 +3,7 @@
 
 #include <any>
 #include <chrono>
+#include <complex>
 #include <deque>
 #include <forward_list>
 #include <initializer_list>
@@ -197,6 +198,8 @@ struct glz::meta<Thing>
 {
    using T = Thing;
    static constexpr std::string_view name = "Thing";
+   static constexpr std::array<std::string_view, 2> required = {"thing", "i"};
+   static constexpr std::array<std::string_view, 1> examples = {R"({"thing":{},"i":42})"};
    static constexpr auto value = object(
       "thing", &T::thing, //
       "thing2array", &T::thing2array, //
@@ -382,6 +385,18 @@ suite basic_types = [] {
       uint64_t num64{};
       expect(glz::read_json(num64, "32948729483739289") == glz::error_code::none);
       expect(num64 == 32948729483739289);
+   };
+
+   "int read invalid"_test = [] {
+      int num{33};
+      expect(glz::read_json(num, ";adsfa") == glz::error_code::parse_number_failure);
+      expect(num == 33);
+      expect(glz::read_json(num, "{}") == glz::error_code::parse_number_failure);
+      expect(num == 33);
+      expect(glz::read_json(num, "[]") == glz::error_code::parse_number_failure);
+      expect(num == 33);
+      expect(glz::read_json(num, ".") == glz::error_code::parse_number_failure);
+      expect(num == 33);
    };
 
    "bool write"_test = [] {
@@ -1435,7 +1450,7 @@ suite read_tests = [] {
          std::string in = R"(null)";
          int res{};
 
-         expect(glz::read_json(res, in) != glz::error_code::parse_number_failure);
+         expect(glz::read_json(res, in) == glz::error_code::parse_number_failure);
       }
    };
 
@@ -1785,12 +1800,28 @@ suite write_tests = [] {
       expect(buf == R"([])");
    };
 
+   "Read empty array structure"_test = [] {
+      EmptyArray e;
+      expect(glz::read_json(e, "[]") == glz::error_code::none);
+      expect(glz::read_json(e, " [   ] ") == glz::error_code::none);
+      expect(glz::read_json(e, "[1,2,3]") == glz::error_code::syntax_error);
+   };
+
    //* Empty object not allowed
    "Write empty object structure"_test = [] {
       EmptyObject e;
       std::string buf;
       glz::write_json(e, buf);
       expect(buf == R"({})");
+   };
+
+   "Read empty object structure"_test = [] {
+      EmptyObject e;
+      static_assert(glz::detail::glaze_object_t<EmptyObject>);
+      expect(glz::read_json(e, "{}") == glz::error_code::none);
+      expect(glz::read_json(e, " {    } ") == glz::error_code::none);
+      expect(glz::read_json(e, "{ \"reject\": 44 }") == glz::error_code::unknown_key);
+      expect(glz::read<glz::opts{.error_on_unknown_keys = false}>(e, "{ \"skipped\": 44 }") == glz::error_code::none);
    };
 
    "Write c-string"_test = [] {
@@ -1809,7 +1840,6 @@ suite write_tests = [] {
 
    "Write constant bool"_test = [] {
       const bool b = true;
-      ;
       std::string buf;
       glz::write_json(b, buf);
       expect(buf == R"(true)");
@@ -3326,7 +3356,8 @@ suite json_schema = [] {
       // when you update this string
       expect(
          schema ==
-         R"({"type":["object"],"properties":{"array":{"$ref":"#/$defs/std::array<std::string,4>"},"b":{"$ref":"#/$defs/bool"},"c":{"$ref":"#/$defs/char"},"color":{"$ref":"#/$defs/Color"},"d":{"$ref":"#/$defs/double","description":"double is the best type"},"deque":{"$ref":"#/$defs/std::deque<double>"},"i":{"$ref":"#/$defs/int32_t","minimum":2},"list":{"$ref":"#/$defs/std::list<int32_t>"},"map":{"$ref":"#/$defs/std::map<std::string,int32_t>"},"mapi":{"$ref":"#/$defs/std::map<int32_t,double>"},"optional":{"$ref":"#/$defs/std::optional<V3>"},"sptr":{"$ref":"#/$defs/std::shared_ptr<sub_thing>"},"thing":{"$ref":"#/$defs/sub_thing"},"thing2array":{"$ref":"#/$defs/std::array<sub_thing2,1>"},"thing_ptr":{"$ref":"#/$defs/sub_thing*"},"v":{"$ref":"#/$defs/std::variant<var1_t,var2_t>"},"vb":{"$ref":"#/$defs/std::vector<bool>"},"vec3":{"$ref":"#/$defs/V3"},"vector":{"$ref":"#/$defs/std::vector<V3>"}},"additionalProperties":false,"$defs":{"Color":{"type":["string"],"oneOf":[{"const":"Red"},{"const":"Green"},{"const":"Blue"}]},"V3":{"type":["array"]},"bool":{"type":["boolean"]},"char":{"type":["string"]},"double":{"type":["number"]},"float":{"type":["number"]},"int32_t":{"type":["integer"]},"std::array<std::string,4>":{"type":["array"],"items":{"$ref":"#/$defs/std::string"}},"std::array<sub_thing2,1>":{"type":["array"],"items":{"$ref":"#/$defs/sub_thing2"}},"std::deque<double>":{"type":["array"],"items":{"$ref":"#/$defs/double"}},"std::list<int32_t>":{"type":["array"],"items":{"$ref":"#/$defs/int32_t"}},"std::map<int32_t,double>":{"type":["object"],"additionalProperties":{"$ref":"#/$defs/double"}},"std::map<std::string,int32_t>":{"type":["object"],"additionalProperties":{"$ref":"#/$defs/int32_t"}},"std::optional<V3>":{"type":["array","null"]},"std::shared_ptr<sub_thing>":{"type":["object","null"],"properties":{"a":{"$ref":"#/$defs/double","description":"Test comment 1"},"b":{"$ref":"#/$defs/std::string","description":"Test comment 2"}},"additionalProperties":false},"std::string":{"type":["string"]},"std::variant<var1_t,var2_t>":{"type":["number","string","boolean","object","array","null"],"oneOf":[{"type":["object"],"properties":{"x":{"$ref":"#/$defs/double"}},"additionalProperties":false},{"type":["object"],"properties":{"y":{"$ref":"#/$defs/double"}},"additionalProperties":false}]},"std::vector<V3>":{"type":["array"],"items":{"$ref":"#/$defs/V3"}},"std::vector<bool>":{"type":["array"],"items":{"$ref":"#/$defs/bool"}},"sub_thing":{"type":["object"],"properties":{"a":{"$ref":"#/$defs/double","description":"Test comment 1"},"b":{"$ref":"#/$defs/std::string","description":"Test comment 2"}},"additionalProperties":false},"sub_thing*":{"type":["object","null"],"properties":{"a":{"$ref":"#/$defs/double","description":"Test comment 1"},"b":{"$ref":"#/$defs/std::string","description":"Test comment 2"}},"additionalProperties":false},"sub_thing2":{"type":["object"],"properties":{"a":{"$ref":"#/$defs/double","description":"Test comment 1"},"b":{"$ref":"#/$defs/std::string","description":"Test comment 2"},"c":{"$ref":"#/$defs/double"},"d":{"$ref":"#/$defs/double"},"e":{"$ref":"#/$defs/double"},"f":{"$ref":"#/$defs/float"},"g":{"$ref":"#/$defs/double"},"h":{"$ref":"#/$defs/double"}},"additionalProperties":false}}})");
+         R"({"type":["object"],"properties":{"array":{"$ref":"#/$defs/std::array<std::string,4>"},"b":{"$ref":"#/$defs/bool"},"c":{"$ref":"#/$defs/char"},"color":{"$ref":"#/$defs/Color"},"d":{"$ref":"#/$defs/double","description":"double is the best type"},"deque":{"$ref":"#/$defs/std::deque<double>"},"i":{"$ref":"#/$defs/int32_t","minimum":2},"list":{"$ref":"#/$defs/std::list<int32_t>"},"map":{"$ref":"#/$defs/std::map<std::string,int32_t>"},"mapi":{"$ref":"#/$defs/std::map<int32_t,double>"},"optional":{"$ref":"#/$defs/std::optional<V3>"},"sptr":{"$ref":"#/$defs/std::shared_ptr<sub_thing>"},"thing":{"$ref":"#/$defs/sub_thing"},"thing2array":{"$ref":"#/$defs/std::array<sub_thing2,1>"},"thing_ptr":{"$ref":"#/$defs/sub_thing*"},"v":{"$ref":"#/$defs/std::variant<var1_t,var2_t>"},"vb":{"$ref":"#/$defs/std::vector<bool>"},"vec3":{"$ref":"#/$defs/V3"},"vector":{"$ref":"#/$defs/std::vector<V3>"}},"additionalProperties":false,"$defs":{"Color":{"type":["string"],"oneOf":[{"const":"Red"},{"const":"Green"},{"const":"Blue"}]},"V3":{"type":["array"]},"bool":{"type":["boolean"]},"char":{"type":["string"]},"double":{"type":["number"]},"float":{"type":["number"]},"int32_t":{"type":["integer"]},"std::array<std::string,4>":{"type":["array"],"items":{"$ref":"#/$defs/std::string"}},"std::array<sub_thing2,1>":{"type":["array"],"items":{"$ref":"#/$defs/sub_thing2"}},"std::deque<double>":{"type":["array"],"items":{"$ref":"#/$defs/double"}},"std::list<int32_t>":{"type":["array"],"items":{"$ref":"#/$defs/int32_t"}},"std::map<int32_t,double>":{"type":["object"],"additionalProperties":{"$ref":"#/$defs/double"}},"std::map<std::string,int32_t>":{"type":["object"],"additionalProperties":{"$ref":"#/$defs/int32_t"}},"std::optional<V3>":{"type":["array","null"]},"std::shared_ptr<sub_thing>":{"type":["object","null"],"properties":{"a":{"$ref":"#/$defs/double","description":"Test comment 1"},"b":{"$ref":"#/$defs/std::string","description":"Test comment 2"}},"additionalProperties":false},"std::string":{"type":["string"]},"std::variant<var1_t,var2_t>":{"type":["number","string","boolean","object","array","null"],"oneOf":[{"type":["object"],"properties":{"x":{"$ref":"#/$defs/double"}},"additionalProperties":false},{"type":["object"],"properties":{"y":{"$ref":"#/$defs/double"}},"additionalProperties":false}]},"std::vector<V3>":{"type":["array"],"items":{"$ref":"#/$defs/V3"}},"std::vector<bool>":{"type":["array"],"items":{"$ref":"#/$defs/bool"}},"sub_thing":{"type":["object"],"properties":{"a":{"$ref":"#/$defs/double","description":"Test comment 1"},"b":{"$ref":"#/$defs/std::string","description":"Test comment 2"}},"additionalProperties":false},"sub_thing*":{"type":["object","null"],"properties":{"a":{"$ref":"#/$defs/double","description":"Test comment 1"},"b":{"$ref":"#/$defs/std::string","description":"Test comment 2"}},"additionalProperties":false},"sub_thing2":{"type":["object"],"properties":{"a":{"$ref":"#/$defs/double","description":"Test comment 1"},"b":{"$ref":"#/$defs/std::string","description":"Test comment 2"},"c":{"$ref":"#/$defs/double"},"d":{"$ref":"#/$defs/double"},"e":{"$ref":"#/$defs/double"},"f":{"$ref":"#/$defs/float"},"g":{"$ref":"#/$defs/double"},"h":{"$ref":"#/$defs/double"}},"additionalProperties":false}},"required":["thing","i"],"examples":[{"thing":{},"i":42}]})")
+         << schema;
    };
 };
 
@@ -4316,7 +4347,7 @@ template <>
 struct glz::meta<A>
 {
    static constexpr auto value =
-      object("x", glz::quoted<&A::x>(), "y", glz::quoted<&A::y>(), "z", glz::quoted<&A::z>());
+      object("x", glz::quoted_num<&A::x>, "y", glz::quoted_num<&A::y>, "z", glz::quoted_num<&A::z>);
 };
 
 suite lamda_wrapper = [] {
@@ -4486,7 +4517,7 @@ template <>
 struct glz::meta<numbers_as_strings>
 {
    using T = numbers_as_strings;
-   static constexpr auto value = object("x", glz::number<&T::x>(), "y", glz::number<&T::y>());
+   static constexpr auto value = object("x", glz::number<&T::x>, "y", glz::number<&T::y>);
 };
 
 suite numbers_as_strings_suite = [] {
@@ -4683,7 +4714,7 @@ template <>
 struct glz::meta<invoke_struct>
 {
    using T = invoke_struct;
-   static constexpr auto value = object("square", invoke<&T::square>(), "add_one", invoke<&T::add_one>());
+   static constexpr auto value = object("square", invoke<&T::square>, "add_one", invoke<&T::add_one>);
 };
 
 suite invoke_test = [] {
@@ -4696,48 +4727,6 @@ suite invoke_test = [] {
 })";
       expect(!glz::read_json(obj, s));
       expect(obj.y == 26); // 5 * 5 + 1
-   };
-};
-
-struct invoke_update_struct
-{
-   int y{};
-   std::function<void(int x)> square{};
-   void add_one() { ++y; }
-
-   // MSVC requires this constructor for 'this' to be captured
-   invoke_update_struct()
-   {
-      square = [&](int x) { y = x * x; };
-   }
-};
-
-template <>
-struct glz::meta<invoke_update_struct>
-{
-   using T = invoke_update_struct;
-   static constexpr auto value = object("square", invoke_update<&T::square>(), "add_one", invoke_update<&T::add_one>());
-};
-
-suite invoke_update_test = [] {
-   "invoke"_test = [] {
-      invoke_update_struct obj{};
-      std::string s = R"(
-{
-   "square":[5],
-   "add_one":[]
-})";
-      expect(!glz::read_json(obj, s));
-      expect(obj.y == 0);
-
-      // second read should invoke
-      std::string s2 = R"(
-{
-   "square":[2],
-   "add_one":[ ]
-})";
-      expect(!glz::read_json(obj, s2));
-      expect(obj.y == 5);
    };
 };
 
@@ -5057,9 +5046,10 @@ struct Person
    std::string city{};
    std::string residence{};
 
-   void getAge(const std::string birthdateStr)
+   void getAge(const std::string /*birthdateStr*/)
    {
-      std::tm birthdate = {};
+      // Example code is commented out to avoid unit tests breaking as the date changes
+      /*std::tm birthdate = {};
       std::istringstream ss(birthdateStr);
       ss >> std::get_time(&birthdate, "%d/%m/%Y");
 
@@ -5071,7 +5061,8 @@ struct Person
       const auto age_seconds =
          std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - birth);
 
-      age = static_cast<int>(age_seconds.count()) / (60 * 60 * 24 * 365);
+      age = static_cast<int>(age_seconds.count()) / (60 * 60 * 24 * 365);*/
+      age = 33;
    }
 };
 
@@ -5081,7 +5072,7 @@ struct glz::meta<Person>
    using T = Person;
    static constexpr auto value =
       glz::object("name", &T::name, "full_name", &T::name, "age", &T::age, "years_old", &T::age, "date_of_birth",
-                  invoke<&T::getAge>(), "city", &T::city, "residence", &T::residence);
+                  invoke<&T::getAge>, "city", &T::city, "residence", &T::residence);
 };
 
 suite function_call = [] {
@@ -5094,6 +5085,207 @@ suite function_call = [] {
         })";
       expect(!glz::read_json(obj, s));
       expect(obj.age == 33);
+   };
+};
+
+struct named_always_null : std::monostate
+{};
+template <>
+struct glz::meta<named_always_null>
+{
+   static constexpr std::string_view name = "named_always_null";
+};
+suite nullable_type = [] { "named_always_null"_test = [] { expect("null" == glz::write_json(named_always_null{})); }; };
+
+struct pointer_wrapper
+{
+   std::unique_ptr<int> x = std::make_unique<int>(5);
+
+   struct glaze
+   {
+      using T = pointer_wrapper;
+      static constexpr auto value = glz::object("x", [](auto& self) { return self.x.get(); });
+   };
+};
+
+suite pointer_wrapper_test = [] {
+   "pointer_wrapper"_test = [] {
+      pointer_wrapper obj{};
+      std::string s = R"({"x": 3})";
+      expect(!glz::read_json(obj, s));
+      expect(*obj.x == 3);
+   };
+};
+
+struct custom_encoding
+{
+   uint64_t x{};
+   std::string y{};
+   std::array<uint32_t, 3> z{};
+
+   void read_x(const std::string& s) { x = std::stoi(s); }
+
+   uint64_t write_x() { return x; }
+
+   void read_y(const std::string& s) { y = "hello" + s; }
+
+   auto& write_z()
+   {
+      z[0] = 5;
+      return z;
+   }
+};
+
+template <>
+struct glz::meta<custom_encoding>
+{
+   using T = custom_encoding;
+   static constexpr auto value = object("x", custom<&T::read_x, &T::write_x>, //
+                                        "y", custom<&T::read_y, &T::y>, //
+                                        "z", custom<&T::z, &T::write_z>);
+};
+
+suite custom_encoding_test = [] {
+   "custom_reading"_test = [] {
+      custom_encoding obj{};
+      std::string s = R"({"x":"3","y":"world","z":[1,2,3]})";
+      expect(!glz::read_json(obj, s));
+      expect(obj.x == 3);
+      expect(obj.y == "helloworld");
+      expect(obj.z == std::array<uint32_t, 3>{1, 2, 3});
+   };
+
+   "custom_writing"_test = [] {
+      custom_encoding obj{};
+      std::string s = R"({"x":"3","y":"world","z":[1,2,3]})";
+      expect(!glz::read_json(obj, s));
+      std::string out{};
+      glz::write_json(obj, out);
+      expect(out == R"({"x":3,"y":"helloworld","z":[5,2,3]})");
+   };
+};
+
+struct client_state
+{
+   uint64_t id{};
+   std::map<std::string, std::vector<std::string>> layouts{};
+};
+
+template <>
+struct glz::meta<client_state>
+{
+   using T = client_state;
+   static constexpr auto value = object("id", &T::id, "layouts", quoted<&T::layouts>);
+};
+
+suite unquote_test = [] {
+   "unquote"_test = [] {
+      client_state obj{};
+      std::string s = R"({
+  "id": 4848,
+  "layouts": "{\"first layout\": [ \"inner1\", \"inner2\" ] }"
+})";
+      expect(!glz::read_json(obj, s));
+      expect(obj.id == 4848);
+      expect(obj.layouts.at("first layout") == std::vector<std::string>{"inner1", "inner2"});
+
+      std::string out{};
+      glz::write_json(obj, out);
+      expect(out == R"({"id":4848,"layouts":"{\"first layout\":[\"inner1\",\"inner2\"]}"})");
+   };
+};
+
+suite complex_test = [] {
+   "complex"_test = [] {
+      std::complex<int> cx{};
+      std::string s = R"([1,2])";
+      expect(!glz::read_json(cx, s));
+      expect(cx.real() == 1);
+      expect(cx.imag() == 2);
+
+      s.clear();
+      glz::write_json(cx, s);
+      expect(s == R"([1,2])");
+   };
+};
+
+struct manage_x
+{
+   std::vector<int> x{};
+   std::vector<int> y{};
+
+   bool handle_x(const glz::manage_state state)
+   {
+      switch (state) {
+      case glz::manage_state::read: {
+         y = x;
+         break;
+      }
+      case glz::manage_state::write: {
+         x = y;
+         break;
+      }
+      default: {
+         return false;
+      }
+      }
+      return true;
+   }
+};
+
+template <>
+struct glz::meta<manage_x>
+{
+   using T = manage_x;
+   static constexpr auto value = object("x", manage<&T::x, &T::handle_x>);
+};
+
+suite manage_test = [] {
+   "manage"_test = [] {
+      manage_x obj{};
+      std::string s = R"({"x":[1,2,3]})";
+      expect(!glz::read_json(obj, s));
+      expect(obj.y[0] == 1);
+      expect(obj.y[1] == 2);
+      expect(obj.y[2] == 3);
+      obj.x.clear();
+      s.clear();
+      glz::write_json(obj, s);
+      expect(s == R"({"x":[1,2,3]})");
+      expect(obj.x[0] == 1);
+      expect(obj.x[1] == 2);
+      expect(obj.x[2] == 3);
+   };
+};
+
+struct varx
+{
+   GLZ_LOCAL_META(varx);
+};
+struct vary
+{
+   GLZ_LOCAL_META(vary);
+};
+
+using vari = std::variant<varx, vary>;
+
+template <>
+struct glz::meta<vari>
+{
+   static constexpr std::string_view tag = "type";
+};
+
+suite empty_variant_objects = [] {
+   "empty_variant_objects"_test = [] {
+      vari v = varx{};
+      std::string s;
+      glz::write_json(v, s);
+      expect(s == R"({"type":"varx"})");
+
+      v = vary{};
+
+      expect(!glz::read_json(v, s));
+      expect(std::holds_alternative<varx>(v));
    };
 };
 

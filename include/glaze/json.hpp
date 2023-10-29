@@ -3,8 +3,10 @@
 
 #pragma once
 
+#include "glaze/json/custom.hpp"
 #include "glaze/json/invoke.hpp"
 #include "glaze/json/json_ptr.hpp"
+#include "glaze/json/manage.hpp"
 #include "glaze/json/ndjson.hpp"
 #include "glaze/json/prettify.hpp"
 #include "glaze/json/ptr.hpp"

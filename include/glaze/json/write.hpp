@@ -128,6 +128,20 @@ namespace glz
          }
       };
 
+      template <complex_t T>
+      struct to_json<T>
+      {
+         template <auto Opts, class B>
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, B&& b, auto&& ix) noexcept
+         {
+            dump<'['>(b, ix);
+            write<json>::op<Opts>(value.real(), ctx, b, ix);
+            dump<','>(b, ix);
+            write<json>::op<Opts>(value.imag(), ctx, b, ix);
+            dump<']'>(b, ix);
+         }
+      };
+
       template <boolean_like T>
       struct to_json<T>
       {
@@ -149,11 +163,11 @@ namespace glz
          template <auto Opts, class B>
          GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, B&& b, auto&& ix) noexcept
          {
-            if constexpr (Opts.quoted) {
+            if constexpr (Opts.quoted_num) {
                dump<'"'>(b, ix);
             }
             write_chars::op<Opts>(value, ctx, b, ix);
-            if constexpr (Opts.quoted) {
+            if constexpr (Opts.quoted_num) {
                dump<'"'>(b, ix);
             }
          }
@@ -172,38 +186,45 @@ namespace glz
             }
             else {
                if constexpr (char_t<T>) {
-                  dump<'"'>(b, ix);
-                  switch (value) {
-                  case '"':
-                     dump<"\\\"">(b, ix);
-                     break;
-                  case '\\':
-                     dump<"\\\\">(b, ix);
-                     break;
-                  case '\b':
-                     dump<"\\b">(b, ix);
-                     break;
-                  case '\f':
-                     dump<"\\f">(b, ix);
-                     break;
-                  case '\n':
-                     dump<"\\n">(b, ix);
-                     break;
-                  case '\r':
-                     dump<"\\r">(b, ix);
-                     break;
-                  case '\t':
-                     dump<"\\t">(b, ix);
-                     break;
-                  case '\0':
-                     // escape character treated as empty string
-                     break;
-                  default:
-                     // Hiding warning for build, this is an error with wider char types
-                     dump(static_cast<char>(value), b,
-                          ix); // TODO: This warning is an error We need to be able to dump wider char types
+                  if constexpr (Opts.raw) {
+                     dump(value, b, ix);
                   }
-                  dump<'"'>(b, ix);
+                  else {
+                     dump<'"'>(b, ix);
+
+                     switch (value) {
+                     case '"':
+                        dump<"\\\"">(b, ix);
+                        break;
+                     case '\\':
+                        dump<"\\\\">(b, ix);
+                        break;
+                     case '\b':
+                        dump<"\\b">(b, ix);
+                        break;
+                     case '\f':
+                        dump<"\\f">(b, ix);
+                        break;
+                     case '\n':
+                        dump<"\\n">(b, ix);
+                        break;
+                     case '\r':
+                        dump<"\\r">(b, ix);
+                        break;
+                     case '\t':
+                        dump<"\\t">(b, ix);
+                        break;
+                     case '\0':
+                        // escape character treated as empty string
+                        break;
+                     default:
+                        // Hiding warning for build, this is an error with wider char types
+                        dump(static_cast<char>(value), b,
+                             ix); // TODO: This warning is an error We need to be able to dump wider char types
+                     }
+
+                     dump<'"'>(b, ix);
+                  }
                }
                else {
                   const sv str = [&]() -> sv {
@@ -227,45 +248,50 @@ namespace glz
                   }
                   // now we don't have to check writing
 
-                  dump_unchecked<'"'>(b, ix);
-
-                  for (auto&& c : str) {
-                     switch (c) {
-                     case '"':
-                        std::memcpy(data_ptr(b) + ix, R"(\")", 2);
-                        ix += 2;
-                        break;
-                     case '\\':
-                        std::memcpy(data_ptr(b) + ix, R"(\\)", 2);
-                        ix += 2;
-                        break;
-                     case '\b':
-                        std::memcpy(data_ptr(b) + ix, R"(\b)", 2);
-                        ix += 2;
-                        break;
-                     case '\f':
-                        std::memcpy(data_ptr(b) + ix, R"(\f)", 2);
-                        ix += 2;
-                        break;
-                     case '\n':
-                        std::memcpy(data_ptr(b) + ix, R"(\n)", 2);
-                        ix += 2;
-                        break;
-                     case '\r':
-                        std::memcpy(data_ptr(b) + ix, R"(\r)", 2);
-                        ix += 2;
-                        break;
-                     case '\t':
-                        std::memcpy(data_ptr(b) + ix, R"(\t)", 2);
-                        ix += 2;
-                        break;
-                     [[likely]] default:
-                        std::memcpy(data_ptr(b) + ix, &c, 1);
-                        ++ix;
-                     }
+                  if constexpr (Opts.raw) {
+                     dump(str, b, ix);
                   }
+                  else {
+                     dump_unchecked<'"'>(b, ix);
 
-                  dump_unchecked<'"'>(b, ix);
+                     for (auto&& c : str) {
+                        switch (c) {
+                        case '"':
+                           std::memcpy(data_ptr(b) + ix, R"(\")", 2);
+                           ix += 2;
+                           break;
+                        case '\\':
+                           std::memcpy(data_ptr(b) + ix, R"(\\)", 2);
+                           ix += 2;
+                           break;
+                        case '\b':
+                           std::memcpy(data_ptr(b) + ix, R"(\b)", 2);
+                           ix += 2;
+                           break;
+                        case '\f':
+                           std::memcpy(data_ptr(b) + ix, R"(\f)", 2);
+                           ix += 2;
+                           break;
+                        case '\n':
+                           std::memcpy(data_ptr(b) + ix, R"(\n)", 2);
+                           ix += 2;
+                           break;
+                        case '\r':
+                           std::memcpy(data_ptr(b) + ix, R"(\r)", 2);
+                           ix += 2;
+                           break;
+                        case '\t':
+                           std::memcpy(data_ptr(b) + ix, R"(\t)", 2);
+                           ix += 2;
+                           break;
+                        [[likely]] default:
+                           std::memcpy(data_ptr(b) + ix, &c, 1);
+                           ++ix;
+                        }
+                     }
+
+                     dump_unchecked<'"'>(b, ix);
+                  }
                }
             }
          }
@@ -402,7 +428,9 @@ namespace glz
                return !bool(value);
             }
          }
-         return false;
+         else {
+            return false;
+         }
       }
 
       template <pair_t T>
@@ -537,6 +565,8 @@ namespace glz
                   using V = std::decay_t<decltype(val)>;
 
                   if constexpr (Opts.write_type_info && !tag_v<T>.empty() && glaze_object_t<V>) {
+                     constexpr auto num_members = std::tuple_size_v<meta_t<V>>;
+
                      // must first write out type
                      if constexpr (Opts.prettify) {
                         dump<"{\n">(args...);
@@ -546,7 +576,12 @@ namespace glz
                         dump(tag_v<T>, args...);
                         dump<"\": \"">(args...);
                         dump(ids_v<T>[value.index()], args...);
-                        dump<"\",\n">(args...);
+                        if constexpr (num_members == 0) {
+                           dump<"\"\n">(args...);
+                        }
+                        else {
+                           dump<"\",\n">(args...);
+                        }
                         dumpn<Opts.indentation_char>(ctx.indentation_level, args...);
                      }
                      else {
@@ -554,7 +589,12 @@ namespace glz
                         dump(tag_v<T>, args...);
                         dump<"\":\"">(args...);
                         dump(ids_v<T>[value.index()], args...);
-                        dump<R"(",)">(args...);
+                        if constexpr (num_members == 0) {
+                           dump<R"(")">(args...);
+                        }
+                        else {
+                           dump<R"(",)">(args...);
+                        }
                      }
                      write<json>::op<opening_handled<Opts>()>(val, ctx, args...);
                   }
@@ -895,6 +935,9 @@ namespace glz
                         if constexpr (std::is_member_pointer_v<mptr_t>) {
                            return !bool(value.*glz::tuplet::get<1>(item));
                         }
+                        else if constexpr (raw_nullable<val_t>) {
+                           return !bool(glz::tuplet::get<1>(item)(value).val);
+                        }
                         else {
                            return !bool(glz::tuplet::get<1>(item)(value));
                         }
@@ -933,19 +976,19 @@ namespace glz
                      }
                      else {
                         if constexpr (Opts.prettify) {
-                           static constexpr auto quoted = join_v<chars<"\"">, key, chars<"\": ">>;
-                           dump<quoted>(b, ix);
+                           static constexpr auto quoted_key = join_v<chars<"\"">, key, chars<"\": ">>;
+                           dump<quoted_key>(b, ix);
                         }
                         else {
-                           static constexpr auto quoted = join_v<chars<"\"">, key, chars<"\":">>;
-                           dump<quoted>(b, ix);
+                           static constexpr auto quoted_key = join_v<chars<"\"">, key, chars<"\":">>;
+                           dump<quoted_key>(b, ix);
                         }
                      }
                   }
                   else {
-                     static constexpr auto quoted =
+                     static constexpr auto quoted_key =
                         concat_arrays(concat_arrays("\"", glz::tuplet::get<0>(item)), "\":", Opts.prettify ? " " : "");
-                     write<json>::op<Opts>(quoted, ctx, b, ix);
+                     write<json>::op<Opts>(quoted_key, ctx, b, ix);
                   }
 
                   write<json>::op<Opts>(get_member(value, glz::tuplet::get<1>(item)), ctx, b, ix);
