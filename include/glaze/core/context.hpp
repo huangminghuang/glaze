@@ -90,5 +90,10 @@ namespace glz
    };
 
    template <class T>
-   concept is_context = std::same_as<std::decay_t<T>, context>;
+   concept is_context = requires (T v){
+      { v.indentation_level }-> std::same_as<uint32_t&>;
+      { v.current_file } -> std::same_as<std::string&>;
+      v.error = error_code{};
+      { v.error } -> std::convertible_to<error_code>;
+   };
 }
