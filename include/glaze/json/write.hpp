@@ -750,7 +750,7 @@ namespace glz
       struct to_json<includer<T>>
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static void op(auto&&, is_context auto&&, Args&&...) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&&, is_write_context auto&&, Args&&...) noexcept
          {}
       };
 

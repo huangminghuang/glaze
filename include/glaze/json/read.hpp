@@ -224,7 +224,8 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(bool_t auto&& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_ALWAYS_INLINE static void op(bool_t auto&& value, is_read_context auto&& ctx, auto&& it,
+                                          auto&& end) noexcept
          {
             if constexpr (Opts.quoted_num) {
                skip_ws<Opts>(ctx, it, end);
@@ -559,7 +560,7 @@ namespace glz
                      }
                      else {
                         switch (*it) {
-                        [[likely]] case '"' : {
+                        [[likely]] case '"': {
                            value.append(start, static_cast<size_t>(it - start));
                            ++it;
                            return;
@@ -568,15 +569,15 @@ namespace glz
                         [[unlikely]] case '\f':
                         [[unlikely]] case '\n':
                         [[unlikely]] case '\r':
-                        [[unlikely]] case '\t' : {
+                        [[unlikely]] case '\t': {
                            ctx.error = error_code::syntax_error;
                            return;
                         }
-                        [[unlikely]] case '\0' : {
+                        [[unlikely]] case '\0': {
                            ctx.error = error_code::unexpected_end;
                            return;
                         }
-                        [[unlikely]] case '\\' : {
+                        [[unlikely]] case '\\': {
                            value.append(start, static_cast<size_t>(it - start));
                            ++it;
                            handle_escaped();
@@ -1223,6 +1224,7 @@ namespace glz
       {
          template <auto Opts>
          GLZ_ALWAYS_INLINE static void op(auto&& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
+            requires( requires {{ ctx.current_file } -> std::same_as<std::string&>; })
          {
             std::string& path = string_buffer();
             read<json>::op<Opts>(path, ctx, it, end);
@@ -1762,7 +1764,7 @@ namespace glz
       struct process_arithmetic_boolean_string_or_array
       {
          template <auto Options>
-         GLZ_FLATTEN static void op(auto&& value, is_context auto&& ctx, auto&& it, auto&& end)
+         GLZ_FLATTEN static void op(auto&& value, is_read_context auto&& ctx, auto&& it, auto&& end)
          {
             if constexpr (std::tuple_size_v<tuple_types_t> < 1) {
                ctx.error = error_code::no_matching_variant_type;

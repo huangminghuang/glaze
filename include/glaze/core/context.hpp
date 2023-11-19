@@ -91,7 +91,6 @@ namespace glz
 
    template <class T>
    concept is_read_context = requires (T v){
-      { v.current_file } -> std::same_as<std::string&>;
       { v.error } -> std::assignable_from<error_code>;
       { v.error } -> std::convertible_to<error_code>;
    };
