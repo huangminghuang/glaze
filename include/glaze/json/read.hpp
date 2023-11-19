@@ -55,7 +55,7 @@ namespace glz
       template <>
       struct read<json>
       {
-         template <auto Opts, class T, is_context Ctx, class It0, class It1>
+         template <auto Opts, class T, is_read_context Ctx, class It0, class It1>
          GLZ_ALWAYS_INLINE static void op(T&& value, Ctx&& ctx, It0&& it, It1&& end) noexcept
          {
             if constexpr (std::is_const_v<std::remove_reference_t<T>>) {
@@ -83,7 +83,7 @@ namespace glz
       template <glaze_value_t T>
       struct from_json<T>
       {
-         template <auto Opts, is_context Ctx, class It0, class It1>
+         template <auto Opts, is_read_context Ctx, class It0, class It1>
          GLZ_ALWAYS_INLINE static void op(auto&& value, Ctx&& ctx, It0&& it, It1&& end) noexcept
          {
             using V = std::decay_t<decltype(get_member(std::declval<T>(), meta_wrapper_v<T>))>;
@@ -96,7 +96,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto&&, is_context auto&& ctx, auto&&...) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&&, is_read_context auto&& ctx, auto&&...) noexcept
          {
             ctx.error = error_code::attempt_member_func_read;
          }
@@ -106,7 +106,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
             match<'"'>(ctx, it, end);
             if (bool(ctx.error)) [[unlikely]]
@@ -144,7 +144,7 @@ namespace glz
       struct from_json<skip>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto&&, is_context auto&& ctx, auto&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&&, is_read_context auto&& ctx, auto&&... args) noexcept
          {
             skip_value<Opts>(ctx, args...);
          }
@@ -165,7 +165,7 @@ namespace glz
       struct from_json<hidden>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto&&, is_context auto&& ctx, auto&&...) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&&, is_read_context auto&& ctx, auto&&...) noexcept
          {
             ctx.error = error_code::attempt_read_hidden;
          }
@@ -175,7 +175,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto&& v, is_context auto&& ctx, auto&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& v, is_read_context auto&& ctx, auto&&... args) noexcept
          {
             if constexpr (!Opts.ws_handled) {
                skip_ws<Opts>(ctx, args...);
@@ -209,7 +209,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto&&, is_context auto&& ctx, auto&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&&, is_read_context auto&& ctx, auto&&... args) noexcept
          {
             if constexpr (!Opts.ws_handled) {
                skip_ws<Opts>(ctx, args...);
@@ -224,7 +224,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(bool_t auto&& value, is_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_ALWAYS_INLINE static void op(bool_t auto&& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
             if constexpr (Opts.quoted_num) {
                skip_ws<Opts>(ctx, it, end);
@@ -267,7 +267,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Options, class It>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, It&& it, auto&& end) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_read_context auto&& ctx, It&& it, auto&& end) noexcept
          {
             if constexpr (Options.quoted_num) {
                skip_ws<Options>(ctx, it, end);
@@ -367,7 +367,7 @@ namespace glz
       }
 
       template <class T, class Val, class It, class End>
-      GLZ_ALWAYS_INLINE void read_escaped_unicode(Val& value, is_context auto&& ctx, It&& it, End&& end)
+      GLZ_ALWAYS_INLINE void read_escaped_unicode(Val& value, is_read_context auto&& ctx, It&& it, End&& end)
       {
          // This is slow but who is escaping unicode nowadays
          // codecvt is problematic on mingw hence mixing with the c character conversion functions
@@ -463,7 +463,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts, class It, class End>
-         GLZ_ALWAYS_INLINE static void op(auto& value, is_context auto&& ctx, It&& it, End&& end) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto& value, is_read_context auto&& ctx, It&& it, End&& end) noexcept
          {
             if constexpr (Opts.number) {
                auto start = it;
@@ -599,7 +599,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts, class It, class End>
-         GLZ_ALWAYS_INLINE static void op(auto& value, is_context auto&& ctx, It&& it, End&& end) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto& value, is_read_context auto&& ctx, It&& it, End&& end) noexcept
          {
             if constexpr (!Opts.opening_handled) {
                if constexpr (!Opts.ws_handled) {
@@ -719,7 +719,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto& value, is_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
             if constexpr (!Opts.opening_handled) {
                if constexpr (!Opts.ws_handled) {
@@ -791,7 +791,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto& value, is_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
             if constexpr (!Opts.ws_handled) {
                skip_ws<Opts>(ctx, it, end);
@@ -819,7 +819,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto& value, is_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
             // read<json>::op<Opts>(*reinterpret_cast<std::underlying_type_t<std::decay_t<decltype(value)>>*>(&value),
             // ctx, it, end);
@@ -833,7 +833,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto& /*value*/, is_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto& /*value*/, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
             if constexpr (!Opts.ws_handled) {
                skip_ws<Opts>(ctx, it, end);
@@ -856,7 +856,7 @@ namespace glz
       struct from_json<basic_raw_json<T>>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
             auto it_start = it;
             skip_value<Opts>(ctx, it, end);
@@ -872,7 +872,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Options>
-         GLZ_FLATTEN static void op(auto& value, is_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_FLATTEN static void op(auto& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
             if constexpr (!Options.ws_handled) {
                skip_ws<Options>(ctx, it, end);
@@ -920,7 +920,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Options>
-         GLZ_FLATTEN static void op(auto& value, is_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_FLATTEN static void op(auto& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
             if constexpr (!Options.ws_handled) {
                skip_ws<Options>(ctx, it, end);
@@ -1019,7 +1019,7 @@ namespace glz
       // it is copied so that it does not actually progress the iterator
       // expects the opening brace ([) to have already been consumed
       template <auto Opts>
-      [[nodiscard]] GLZ_ALWAYS_INLINE size_t number_of_array_elements(is_context auto&& ctx, auto it,
+      [[nodiscard]] GLZ_ALWAYS_INLINE size_t number_of_array_elements(is_read_context auto&& ctx, auto it,
                                                                       auto&& end) noexcept
       {
          skip_ws<Opts>(ctx, it, end);
@@ -1078,7 +1078,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Options>
-         GLZ_FLATTEN static void op(auto& value, is_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_FLATTEN static void op(auto& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
             if constexpr (!Options.ws_handled) {
                skip_ws<Options>(ctx, it, end);
@@ -1112,7 +1112,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts>
-         GLZ_FLATTEN static void op(auto& value, is_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_FLATTEN static void op(auto& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
             static constexpr auto N = []() constexpr {
                if constexpr (glaze_array_t<T>) {
@@ -1176,7 +1176,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
             if constexpr (!Opts.ws_handled) {
                skip_ws<Opts>(ctx, it, end);
@@ -1222,7 +1222,7 @@ namespace glz
       struct from_json<includer<T>>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
             std::string& path = string_buffer();
             read<json>::op<Opts>(path, ctx, it, end);
@@ -1358,7 +1358,7 @@ namespace glz
       }
 
       template <glz::opts Opts>
-      GLZ_ALWAYS_INLINE void parse_object_opening(is_context auto& ctx, auto& it, const auto end)
+      GLZ_ALWAYS_INLINE void parse_object_opening(is_read_context auto& ctx, auto& it, const auto end)
       {
          if constexpr (!Opts.opening_handled) {
             if constexpr (!Opts.ws_handled) {
@@ -1373,7 +1373,7 @@ namespace glz
       }
 
       template <glz::opts Opts>
-      GLZ_ALWAYS_INLINE void parse_object_entry_sep(is_context auto& ctx, auto& it, const auto end)
+      GLZ_ALWAYS_INLINE void parse_object_entry_sep(is_read_context auto& ctx, auto& it, const auto end)
       {
          skip_ws<Opts>(ctx, it, end);
          if (bool(ctx.error)) [[unlikely]]
@@ -1385,7 +1385,7 @@ namespace glz
       // Key parsing for meta objects or variants of meta objects.
       // TODO We could expand this to compiletime known strings in general like enums
       template <class T, auto Opts, string_literal tag = "">
-      GLZ_ALWAYS_INLINE std::string_view parse_object_key(is_context auto&& ctx, auto&& it, auto&& end)
+      GLZ_ALWAYS_INLINE std::string_view parse_object_key(is_read_context auto&& ctx, auto&& it, auto&& end)
       {
          // skip white space and escape characters and find the string
          if constexpr (!Opts.ws_handled) {
@@ -1454,7 +1454,7 @@ namespace glz
       struct from_json<T>
       {
          template <opts Options, string_literal tag = "">
-         GLZ_FLATTEN static void op(T& value, is_context auto&& ctx, auto&& it, auto&& end)
+         GLZ_FLATTEN static void op(T& value, is_read_context auto&& ctx, auto&& it, auto&& end)
          {
             parse_object_opening<Options>(ctx, it, end);
             if (bool(ctx.error)) [[unlikely]]
@@ -1508,7 +1508,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Options, string_literal tag = "">
-         GLZ_FLATTEN static void op(auto&& value, is_context auto&& ctx, auto&& it, auto&& end)
+         GLZ_FLATTEN static void op(auto&& value, is_read_context auto&& ctx, auto&& it, auto&& end)
          {
             parse_object_opening<Options>(ctx, it, end);
             if (bool(ctx.error)) [[unlikely]]
@@ -1810,7 +1810,7 @@ namespace glz
       {
          // Note that items in the variant are required to be default constructable for us to switch types
          template <auto Options>
-         GLZ_FLATTEN static void op(auto&& value, is_context auto&& ctx, auto&& it, auto&& end)
+         GLZ_FLATTEN static void op(auto&& value, is_read_context auto&& ctx, auto&& it, auto&& end)
          {
             if constexpr (variant_is_auto_deducible<T>()) {
                if constexpr (!Options.ws_handled) {
@@ -2027,7 +2027,7 @@ namespace glz
       struct from_json<array_variant_wrapper<T>>
       {
          template <auto Options>
-         GLZ_FLATTEN static void op(auto&& wrapper, is_context auto&& ctx, auto&& it, auto&& end)
+         GLZ_FLATTEN static void op(auto&& wrapper, is_read_context auto&& ctx, auto&& it, auto&& end)
          {
             auto& value = wrapper.value;
 
@@ -2089,7 +2089,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Options>
-         GLZ_FLATTEN static void op(auto&& value, is_context auto&& ctx, auto&& it, auto&& end) noexcept
+         GLZ_FLATTEN static void op(auto&& value, is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
          {
             if constexpr (!Options.ws_handled) {
                skip_ws<Options>(ctx, it, end);

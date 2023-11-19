@@ -17,7 +17,7 @@ namespace glz
       template <>
       struct read<ndjson>
       {
-         template <auto Opts, class T, is_context Ctx, class It0, class It1>
+         template <auto Opts, class T, is_read_context Ctx, class It0, class It1>
          static void op(T&& value, Ctx&& ctx, It0&& it, It1&& end)
          {
             from_ndjson<std::decay_t<T>>::template op<Opts>(std::forward<T>(value), std::forward<Ctx>(ctx),
@@ -30,7 +30,7 @@ namespace glz
       struct from_ndjson<T>
       {
          template <auto Opts>
-         static void op(auto& value, is_context auto&& ctx, auto&& it, auto&& end)
+         static void op(auto& value, is_read_context auto&& ctx, auto&& it, auto&& end)
          {
             if (bool(ctx.error)) [[unlikely]] {
                return;
@@ -105,7 +105,7 @@ namespace glz
       struct from_ndjson<T>
       {
          template <auto Opts>
-         static void op(auto& value, is_context auto&& ctx, auto&& it, auto&& end)
+         static void op(auto& value, is_read_context auto&& ctx, auto&& it, auto&& end)
          {
             if (bool(ctx.error)) [[unlikely]] {
                return;
@@ -163,7 +163,7 @@ namespace glz
       template <>
       struct write<ndjson>
       {
-         template <auto Opts, class T, is_context Ctx, class B, class IX>
+         template <auto Opts, class T, is_write_context Ctx, class B, class IX>
          static void op(T&& value, Ctx&& ctx, B&& b, IX&& ix)
          {
             to_ndjson<std::decay_t<T>>::template op<Opts>(std::forward<T>(value), std::forward<Ctx>(ctx),
@@ -175,7 +175,7 @@ namespace glz
       struct to_ndjson<T>
       {
          template <auto Opts, class... Args>
-         static void op(auto&& value, is_context auto&& ctx, Args&&... args) noexcept
+         static void op(auto&& value, is_write_context auto&& ctx, Args&&... args) noexcept
          {
             const auto is_empty = [&]() -> bool {
                if constexpr (has_size<T>) {
@@ -204,7 +204,7 @@ namespace glz
       struct to_ndjson<T>
       {
          template <auto Opts, class... Args>
-         static void op(auto&& value, is_context auto&& ctx, Args&&... args) noexcept
+         static void op(auto&& value, is_write_context auto&& ctx, Args&&... args) noexcept
          {
             static constexpr auto N = []() constexpr {
                if constexpr (glaze_array_t<std::decay_t<T>>) {
@@ -236,7 +236,7 @@ namespace glz
       struct to_ndjson<T>
       {
          template <auto Opts, class... Args>
-         static void op(auto&& value, is_context auto&& ctx, Args&&... args) noexcept
+         static void op(auto&& value, is_write_context auto&& ctx, Args&&... args) noexcept
          {
             static constexpr auto N = []() constexpr {
                if constexpr (glaze_array_t<std::decay_t<T>>) {

@@ -13,7 +13,7 @@
 namespace glz
 {
    template <opts Opts>
-   inline decltype(auto) read_iterators(is_context auto&& ctx, detail::contiguous auto&& buffer) noexcept
+   inline decltype(auto) read_iterators(is_read_context auto&& ctx, detail::contiguous auto&& buffer) noexcept
    {
       static_assert(sizeof(decltype(*buffer.data())) == 1);
 
@@ -46,7 +46,7 @@ namespace glz
 
    // For reading json from a std::vector<char>, std::deque<char> and the like
    template <opts Opts>
-   [[nodiscard]] inline parse_error read(auto& value, detail::contiguous auto&& buffer, is_context auto&& ctx) noexcept
+   [[nodiscard]] inline parse_error read(auto& value, detail::contiguous auto&& buffer, is_read_context auto&& ctx) noexcept
    {
       static_assert(sizeof(decltype(*buffer.data())) == 1);
 

@@ -20,7 +20,7 @@ namespace glz
       template <>
       struct write<csv>
       {
-         template <auto Opts, class T, is_context Ctx, class B, class IX>
+         template <auto Opts, class T, is_write_context Ctx, class B, class IX>
          static void op(T&& value, Ctx&& ctx, B&& b, IX&& ix) noexcept
          {
             to_csv<std::decay_t<T>>::template op<Opts>(std::forward<T>(value), std::forward<Ctx>(ctx),
@@ -31,7 +31,7 @@ namespace glz
       template <glaze_value_t T>
       struct to_csv<T>
       {
-         template <auto Opts, is_context Ctx, class B, class IX>
+         template <auto Opts, is_write_context Ctx, class B, class IX>
          static void op(auto&& value, Ctx&& ctx, B&& b, IX&& ix) noexcept
          {
             using V = decltype(get_member(std::declval<T>(), meta_wrapper_v<T>));
@@ -44,7 +44,7 @@ namespace glz
       struct to_csv<T>
       {
          template <auto Opts, class B>
-         static void op(auto&& value, is_context auto&& ctx, B&& b, auto&& ix) noexcept
+         static void op(auto&& value, is_write_context auto&& ctx, B&& b, auto&& ix) noexcept
          {
             write_chars::op<Opts>(value, ctx, b, ix);
          }
@@ -54,7 +54,7 @@ namespace glz
       struct to_csv<T>
       {
          template <auto Opts, class B>
-         static void op(auto&& value, is_context auto&&, B&& b, auto&& ix) noexcept
+         static void op(auto&& value, is_write_context auto&&, B&& b, auto&& ix) noexcept
          {
             if (value) {
                dump<'1'>(b, ix);
@@ -69,7 +69,7 @@ namespace glz
       struct to_csv<T>
       {
          template <auto Opts, class B>
-         static void op(auto&& value, is_context auto&& ctx, B&& b, auto&& ix) noexcept
+         static void op(auto&& value, is_write_context auto&& ctx, B&& b, auto&& ix) noexcept
          {
             if constexpr (resizeable<T>) {
                if constexpr (Opts.layout == rowwise) {
@@ -104,7 +104,7 @@ namespace glz
       struct to_csv<T>
       {
          template <auto Opts, class B>
-         static void op(auto&& value, is_context auto&&, B&& b, auto&& ix) noexcept
+         static void op(auto&& value, is_write_context auto&&, B&& b, auto&& ix) noexcept
          {
             dump(value, b, ix);
          }
@@ -114,7 +114,7 @@ namespace glz
       struct to_csv<T>
       {
          template <auto Opts, class B>
-         static void op(auto&& value, is_context auto&& ctx, B&& b, auto&& ix) noexcept
+         static void op(auto&& value, is_write_context auto&& ctx, B&& b, auto&& ix) noexcept
          {
             if constexpr (Opts.layout == rowwise) {
                for (auto& [name, data] : value) {
@@ -177,7 +177,7 @@ namespace glz
       struct to_csv<T>
       {
          template <auto Opts, class B>
-         static void op(auto&& value, is_context auto&& ctx, B&& b, auto&& ix) noexcept
+         static void op(auto&& value, is_write_context auto&& ctx, B&& b, auto&& ix) noexcept
          {
             using V = std::decay_t<T>;
             static constexpr auto N = std::tuple_size_v<meta_t<V>>;

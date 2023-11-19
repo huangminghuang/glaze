@@ -12,16 +12,16 @@
 namespace glz::detail
 {
    template <opts Opts>
-   inline void skip_value_binary(is_context auto&&, auto&&, auto&&) noexcept;
+   inline void skip_value_binary(is_read_context auto&&, auto&&, auto&&) noexcept;
 
-   inline void skip_string_binary(is_context auto&&, auto&& it, auto&& end) noexcept
+   inline void skip_string_binary(is_read_context auto&&, auto&& it, auto&& end) noexcept
    {
       ++it;
       const auto n = int_from_compressed(it, end);
       std::advance(it, n);
    }
 
-   inline void skip_number_binary(is_context auto&&, auto&& it, auto&&) noexcept
+   inline void skip_number_binary(is_read_context auto&&, auto&& it, auto&&) noexcept
    {
       const auto tag = uint8_t(*it);
       const uint8_t byte_count = byte_count_lookup[tag >> 5];
@@ -31,7 +31,7 @@ namespace glz::detail
    }
 
    template <opts Opts>
-   inline void skip_object_binary(is_context auto&& ctx, auto&& it, auto&& end) noexcept
+   inline void skip_object_binary(is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
    {
       const auto tag = uint8_t(*it);
       ++it;
@@ -70,7 +70,7 @@ namespace glz::detail
    }
 
    template <opts Opts>
-   inline void skip_typed_array_binary(is_context auto&& ctx, auto&& it, auto&& end) noexcept
+   inline void skip_typed_array_binary(is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
    {
       const auto tag = uint8_t(*it);
       const uint8_t type = (tag & 0b000'11'000) >> 3;
@@ -104,7 +104,7 @@ namespace glz::detail
    }
 
    template <opts Opts>
-   inline void skip_untyped_array_binary(is_context auto&& ctx, auto&& it, auto&& end) noexcept
+   inline void skip_untyped_array_binary(is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
    {
       ++it;
       const auto n = int_from_compressed(it, end);
@@ -114,14 +114,14 @@ namespace glz::detail
    }
 
    template <opts Opts>
-   inline void skip_additional_binary(is_context auto&& ctx, auto&& it, auto&& end) noexcept
+   inline void skip_additional_binary(is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
    {
       ++it;
       skip_value_binary<Opts>(ctx, it, end);
    }
 
    template <opts Opts>
-   inline void skip_value_binary(is_context auto&& ctx, auto&& it, auto&& end) noexcept
+   inline void skip_value_binary(is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
    {
       switch (uint8_t(*it) & 0b00000'111) {
       case tag::null: {

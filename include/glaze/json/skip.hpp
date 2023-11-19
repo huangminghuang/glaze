@@ -8,7 +8,7 @@
 namespace glz::detail
 {
    template <opts Opts>
-   GLZ_FLATTEN void skip_object(is_context auto&& ctx, auto&& it, auto&& end) noexcept
+   GLZ_FLATTEN void skip_object(is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
    {
       if (bool(ctx.error)) [[unlikely]] {
          return;
@@ -59,7 +59,7 @@ namespace glz::detail
    }
 
    template <opts Opts>
-   GLZ_FLATTEN void skip_array(is_context auto&& ctx, auto&& it, auto&& end) noexcept
+   GLZ_FLATTEN void skip_array(is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
    {
       if (bool(ctx.error)) [[unlikely]] {
          return;
@@ -94,7 +94,7 @@ namespace glz::detail
    }
 
    template <opts Opts>
-   GLZ_FLATTEN void skip_value(is_context auto&& ctx, auto&& it, auto&& end) noexcept
+   GLZ_FLATTEN void skip_value(is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
    {
       if (bool(ctx.error)) [[unlikely]] {
          return;
@@ -187,7 +187,7 @@ namespace glz::detail
 
    // expects opening whitespace to be handled
    template <opts Opts>
-   GLZ_ALWAYS_INLINE auto parse_value(is_context auto&& ctx, auto&& it, auto&& end) noexcept
+   GLZ_ALWAYS_INLINE auto parse_value(is_read_context auto&& ctx, auto&& it, auto&& end) noexcept
    {
       auto start = it;
       skip_value<Opts>(ctx, it, end);

@@ -39,7 +39,7 @@ namespace glz
       struct from_binary<T>
       {
          template <auto Opts>
-         static void op(auto& value, is_context auto&& ctx, auto&& it, auto&& end)
+         static void op(auto& value, is_read_context auto&& ctx, auto&& it, auto&& end)
          {
             ++it;
             constexpr uint8_t layout = uint8_t(!T::IsRowMajor);
@@ -60,7 +60,7 @@ namespace glz
       struct from_binary<T>
       {
          template <auto Opts>
-         static void op(auto& value, is_context auto&& ctx, auto&& it, auto&& end)
+         static void op(auto& value, is_read_context auto&& ctx, auto&& it, auto&& end)
          {
             ++it;
             constexpr uint8_t layout = uint8_t(!T::IsRowMajor);
@@ -81,7 +81,7 @@ namespace glz
       struct to_binary<T>
       {
          template <auto Opts>
-         static void op(auto&& value, is_context auto&& ctx, auto&&... args) noexcept
+         static void op(auto&& value, is_write_context auto&& ctx, auto&&... args) noexcept
          {
             constexpr uint8_t matrix = 0b00010'000;
             constexpr uint8_t tag = tag::extensions | matrix;
@@ -103,7 +103,7 @@ namespace glz
       struct to_binary<T>
       {
          template <auto Opts>
-         static void op(auto&& value, is_context auto&& ctx, auto&&... args) noexcept
+         static void op(auto&& value, is_write_context auto&& ctx, auto&&... args) noexcept
          {
             constexpr uint8_t matrix = 0b00010'000;
             constexpr uint8_t tag = tag::extensions | matrix;
@@ -125,7 +125,7 @@ namespace glz
       struct from_json<T>
       {
          template <auto Opts>
-         static void op(auto& value, is_context auto&& ctx, auto&& it, auto&& end)
+         static void op(auto& value, is_read_context auto&& ctx, auto&& it, auto&& end)
          {
             std::span<typename T::Scalar, T::RowsAtCompileTime * T::ColsAtCompileTime> view(value.data(), value.size());
             detail::read<json>::op<Opts>(view, ctx, it, end);
@@ -137,7 +137,7 @@ namespace glz
       struct to_json<T>
       {
          template <auto Opts>
-         static void op(auto&& value, is_context auto&& ctx, auto&& b, auto&& ix) noexcept
+         static void op(auto&& value, is_write_context auto&& ctx, auto&& b, auto&& ix) noexcept
          {
             std::span<typename T::Scalar, T::RowsAtCompileTime * T::ColsAtCompileTime> view(value.data(), value.size());
             detail::write<json>::op<Opts>(view, ctx, b, ix);

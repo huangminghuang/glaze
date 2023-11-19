@@ -22,7 +22,7 @@ namespace glz
       template <>
       struct read<csv>
       {
-         template <auto Opts, class T, is_context Ctx, class It0, class It1>
+         template <auto Opts, class T, is_read_context Ctx, class It0, class It1>
          static void op(T&& value, Ctx&& ctx, It0&& it, It1 end) noexcept
          {
             from_csv<std::decay_t<T>>::template op<Opts>(std::forward<T>(value), std::forward<Ctx>(ctx),
@@ -33,7 +33,7 @@ namespace glz
       template <glaze_value_t T>
       struct from_csv<T>
       {
-         template <auto Opts, is_context Ctx, class It0, class It1>
+         template <auto Opts, is_read_context Ctx, class It0, class It1>
          static void op(auto&& value, Ctx&& ctx, It0&& it, It1&& end) noexcept
          {
             using V = decltype(get_member(std::declval<T>(), meta_wrapper_v<T>));
@@ -46,7 +46,7 @@ namespace glz
       struct from_csv<T>
       {
          template <auto Opts, class It>
-         static void op(auto&& value, is_context auto&& ctx, It&& it, auto&&) noexcept
+         static void op(auto&& value, is_read_context auto&& ctx, It&& it, auto&&) noexcept
          {
             if (bool(ctx.error)) [[unlikely]] {
                return;
@@ -106,7 +106,7 @@ namespace glz
       struct from_csv<T>
       {
          template <auto Opts, class It>
-         static void op(auto&& value, is_context auto&& ctx, It&& it, auto&& end) noexcept
+         static void op(auto&& value, is_read_context auto&& ctx, It&& it, auto&& end) noexcept
          {
             if (bool(ctx.error)) [[unlikely]] {
                return;
@@ -146,7 +146,7 @@ namespace glz
       struct from_csv<T>
       {
          template <auto Opts, class It>
-         static void op(auto&& value, is_context auto&& ctx, It&& it, auto&&) noexcept
+         static void op(auto&& value, is_read_context auto&& ctx, It&& it, auto&&) noexcept
          {
             if (bool(ctx.error)) [[unlikely]] {
                return;
@@ -166,7 +166,7 @@ namespace glz
       struct from_csv<T>
       {
          template <auto Opts, class It>
-         static void op(auto&& value, is_context auto&& ctx, It&& it, auto&& end) noexcept
+         static void op(auto&& value, is_read_context auto&& ctx, It&& it, auto&& end) noexcept
          {
             read<csv>::op<Opts>(value.emplace_back(), ctx, it, end);
          }
@@ -231,7 +231,7 @@ namespace glz
       struct from_csv<T>
       {
          template <auto Opts, class It>
-         static void op(auto&& value, is_context auto&& ctx, It&& it, auto&& end)
+         static void op(auto&& value, is_read_context auto&& ctx, It&& it, auto&& end)
          {
             if constexpr (Opts.layout == rowwise) {
                while (it != end) {
@@ -360,7 +360,7 @@ namespace glz
       struct from_csv<T>
       {
          template <auto Opts, class It>
-         static void op(auto&& value, is_context auto&& ctx, It&& it, auto&& end)
+         static void op(auto&& value, is_read_context auto&& ctx, It&& it, auto&& end)
          {
             static constexpr auto frozen_map = detail::make_map<T, Opts.use_hash_comparison>();
             // static constexpr auto N = std::tuple_size_v<meta_t<T>>;

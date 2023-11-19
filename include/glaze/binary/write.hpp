@@ -84,7 +84,7 @@ namespace glz
       template <>
       struct write<binary>
       {
-         template <auto Opts, class T, is_context Ctx, class B, class IX>
+         template <auto Opts, class T, is_write_context Ctx, class B, class IX>
          GLZ_ALWAYS_INLINE static void op(T&& value, Ctx&& ctx, B&& b, IX&& ix) noexcept
          {
             if constexpr (write_binary_invocable<Opts, T, Ctx, B, IX>) {
@@ -96,7 +96,7 @@ namespace glz
             }
          }
 
-         template <auto Opts, class T, is_context Ctx, class B, class IX>
+         template <auto Opts, class T, is_write_context Ctx, class B, class IX>
          GLZ_ALWAYS_INLINE static void no_header(T&& value, Ctx&& ctx, B&& b, IX&& ix) noexcept
          {
             to_binary<std::remove_cvref_t<T>>::template no_header<Opts>(std::forward<T>(value), std::forward<Ctx>(ctx),
@@ -119,7 +119,7 @@ namespace glz
       struct to_binary<T>
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&&, auto&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_write_context auto&&, auto&&... args) noexcept
          {
             constexpr uint8_t type = uint8_t(3) << 3;
             constexpr uint8_t tag = tag::typed_array | type;
@@ -145,7 +145,7 @@ namespace glz
       struct to_binary<T>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&&, auto&& b, auto&& ix)
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_write_context auto&&, auto&& b, auto&& ix)
          {
             static constexpr auto N = std::tuple_size_v<meta_t<T>>;
 
@@ -165,7 +165,7 @@ namespace glz
       struct to_binary<T>
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static void op(auto&&, is_context auto&&, Args&&...) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&&, is_write_context auto&&, Args&&...) noexcept
          {}
       };
 
@@ -173,7 +173,7 @@ namespace glz
       struct to_binary<includer<T>>
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static void op(auto&&, is_context auto&&, Args&&...) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&&, is_write_context auto&&, Args&&...) noexcept
          {}
       };
 
@@ -181,7 +181,7 @@ namespace glz
       struct to_binary<T> final
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static void op(const bool value, is_context auto&&, Args&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(const bool value, is_write_context auto&&, Args&&... args) noexcept
          {
             dump_type(value ? tag::bool_true : tag::bool_false, args...);
          }
@@ -191,7 +191,7 @@ namespace glz
       struct to_binary<T> final
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static void op(auto&&, is_context auto&&, Args&&...) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&&, is_write_context auto&&, Args&&...) noexcept
          {}
       };
 
@@ -199,7 +199,7 @@ namespace glz
       struct to_binary<basic_raw_json<T>> final
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, Args&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_write_context auto&& ctx, Args&&... args) noexcept
          {
             write<binary>::op<Opts>(value.str, ctx, std::forward<Args>(args)...);
          }
@@ -209,7 +209,7 @@ namespace glz
       struct to_binary<T> final
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, Args&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_write_context auto&& ctx, Args&&... args) noexcept
          {
             std::visit(
                [&](auto&& v) {
@@ -234,7 +234,7 @@ namespace glz
       struct to_binary<T> final
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&&, Args&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_write_context auto&&, Args&&... args) noexcept
          {
             constexpr uint8_t type = std::floating_point<T> ? 0 : (std::is_signed_v<T> ? 0b000'01'000 : 0b000'10'000);
             constexpr uint8_t tag = tag::number | type | (byte_count<T> << 5);
@@ -243,7 +243,7 @@ namespace glz
          }
 
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void no_header(auto&& value, is_context auto&&, auto&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void no_header(auto&& value, is_write_context auto&&, auto&&... args) noexcept
          {
             dump_type(value, args...);
          }
@@ -254,7 +254,7 @@ namespace glz
       struct to_binary<T> final
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&&, auto&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_write_context auto&&, auto&&... args) noexcept
          {
             constexpr uint8_t tag = tag::extensions | 0b00011'000;
             dump_type(tag, args...);
@@ -269,7 +269,7 @@ namespace glz
          }
 
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void no_header(auto&& value, is_context auto&&, auto&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void no_header(auto&& value, is_write_context auto&&, auto&&... args) noexcept
          {
             dump_type(value.real(), args...);
             dump_type(value.imag(), args...);
@@ -280,7 +280,7 @@ namespace glz
       struct to_binary<T> final
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&&, auto&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_write_context auto&&, auto&&... args) noexcept
          {
             constexpr uint8_t tag = tag::string;
 
@@ -290,7 +290,7 @@ namespace glz
          }
 
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void no_header(auto&& value, is_context auto&&, auto&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void no_header(auto&& value, is_write_context auto&&, auto&&... args) noexcept
          {
             dump_compressed_int<Opts>(value.size(), args...);
             dump(std::as_bytes(std::span{value.data(), value.size()}), args...);
@@ -301,7 +301,7 @@ namespace glz
       struct to_binary<T> final
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, Args&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_write_context auto&& ctx, Args&&... args) noexcept
          {
             using V = range_value_t<std::decay_t<T>>;
 
@@ -397,7 +397,7 @@ namespace glz
       struct to_binary<T> final
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static auto op(auto&& value, is_context auto&& ctx, Args&&... args) noexcept
+         GLZ_ALWAYS_INLINE static auto op(auto&& value, is_write_context auto&& ctx, Args&&... args) noexcept
          {
             using Key = typename T::first_type;
 
@@ -417,7 +417,7 @@ namespace glz
       struct to_binary<T> final
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static auto op(auto&& value, is_context auto&& ctx, Args&&... args) noexcept
+         GLZ_ALWAYS_INLINE static auto op(auto&& value, is_write_context auto&& ctx, Args&&... args) noexcept
          {
             using Key = typename T::key_type;
 
@@ -438,7 +438,7 @@ namespace glz
       struct to_binary<T> final
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, Args&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_write_context auto&& ctx, Args&&... args) noexcept
          {
             if (value) {
                write<binary>::op<Opts>(*value, ctx, args...);
@@ -454,7 +454,7 @@ namespace glz
       struct to_binary<T> final
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, Args&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_write_context auto&& ctx, Args&&... args) noexcept
          {
             constexpr uint8_t type = 0; // string key
             constexpr uint8_t tag = tag::object | type;
@@ -477,7 +477,7 @@ namespace glz
       struct to_binary<T> final
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, Args&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_write_context auto&& ctx, Args&&... args) noexcept
          {
             dump<std::byte(tag::generic_array)>(args...);
 
@@ -495,7 +495,7 @@ namespace glz
       struct to_binary<T> final
       {
          template <auto Opts, class... Args>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, Args&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_write_context auto&& ctx, Args&&... args) noexcept
          {
             dump<std::byte(tag::generic_array)>(args...);
 
@@ -526,7 +526,7 @@ namespace glz
    concept findable = requires(Map& map, const Key& key) { map.find(key); };
 
    template <auto& Partial, opts Opts, class T, output_buffer Buffer>
-   [[nodiscard]] inline write_error write(T&& value, is_context auto&& ctx, Buffer& buffer, auto& ix) noexcept
+   [[nodiscard]] inline write_error write(T&& value, is_write_context auto&& ctx, Buffer& buffer, auto& ix) noexcept
    {
       write_error we{};
 

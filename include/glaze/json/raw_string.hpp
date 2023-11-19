@@ -41,7 +41,7 @@ namespace glz
       struct to_json<raw_string_t<T>>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, auto&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_write_context auto&& ctx, auto&&... args) noexcept
          {
             write<json>::op<opt_true<Opts, &opts::raw_string>>(value.val, ctx, args...);
          }
@@ -61,7 +61,7 @@ namespace glz
       struct to_json<escaped_t<T>>
       {
          template <auto Opts>
-         GLZ_ALWAYS_INLINE static void op(auto&& value, is_context auto&& ctx, auto&&... args) noexcept
+         GLZ_ALWAYS_INLINE static void op(auto&& value, is_write_context auto&& ctx, auto&&... args) noexcept
          {
             write<json>::op<opt_false<Opts, &opts::raw_string>>(value.val, ctx, args...);
          }
