@@ -606,7 +606,7 @@ namespace glz
             buffer.resize(128);
          }
       }
-      context ctx{};
+      write_context ctx{};
       size_t ix = 0;
       const auto error = write<Partial, Opts>(std::forward<T>(value), ctx, buffer, ix);
       if constexpr (detail::resizeable<Buffer>) {

@@ -2141,7 +2141,7 @@ namespace glz
    template <class Buffer>
    [[nodiscard]] inline parse_error validate_json(Buffer&& buffer) noexcept
    {
-      context ctx{};
+      read_context ctx{};
       glz::skip skip_value{};
       return read<opts{.force_conformance = true}>(skip_value, std::forward<Buffer>(buffer), ctx);
    }
@@ -2149,7 +2149,7 @@ namespace glz
    template <class T, class Buffer>
    [[nodiscard]] inline parse_error read_json(T& value, Buffer&& buffer) noexcept
    {
-      context ctx{};
+      read_context ctx{};
       return read<opts{}>(value, std::forward<Buffer>(buffer), ctx);
    }
 
@@ -2157,7 +2157,7 @@ namespace glz
    [[nodiscard]] inline expected<T, parse_error> read_json(Buffer&& buffer) noexcept
    {
       T value{};
-      context ctx{};
+      read_context ctx{};
       const auto ec = read<opts{}>(value, std::forward<Buffer>(buffer), ctx);
       if (ec) {
          return unexpected(ec);

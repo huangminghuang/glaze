@@ -89,17 +89,39 @@ namespace glz
       error_code error{};
    };
 
-   template <class T>
-   concept is_read_context = requires (T v){
-      { v.error } -> std::assignable_from<error_code>;
-      { v.error } -> std::convertible_to<error_code>;
+   struct read_context
+   {
+      std::string current_file; // top level file path
+      error_code error{};
+   };
+
+   struct write_context
+   {
+      uint32_t indentation_level{};
+      std::string current_file; // top level file path
+      error_code error{};
    };
 
    template <class T>
-   concept is_write_context = requires (T v){
-       { v.indentation_level }-> std::same_as<uint32_t&>;
+   concept is_read_context = requires(T v) {
+      {
+         v.current_file
+      } -> std::same_as<std::string&>;
+      {
+         v.error
+      } -> std::assignable_from<error_code>;
+      {
+         v.error
+      } -> std::convertible_to<error_code>;
    };
 
    template <class T>
-   concept is_context = is_read_context<T> && is_write_context<T>;
+   concept is_write_context = is_read_context<T> &&  requires(T v) {
+      {
+         v.indentation_level
+      } -> std::same_as<uint32_t&>;
+   };
+
+   template <class T>
+   concept is_context = is_write_context<T>;
 }

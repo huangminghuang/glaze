@@ -527,7 +527,7 @@ namespace glz
    template <uint32_t layout = rowwise, class T>
    inline parse_error read_file_csv(T& value, const sv file_name)
    {
-      context ctx{};
+      read_context ctx{};
       ctx.current_file = file_name;
 
       std::string buffer;

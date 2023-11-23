@@ -96,7 +96,7 @@ namespace glz
    template <opts Opts>
    [[nodiscard]] inline parse_error read(auto& value, detail::contiguous auto&& buffer) noexcept
    {
-      context ctx{};
+      read_context ctx{};
       return read<Opts>(value, buffer, ctx);
    }
 
@@ -117,7 +117,7 @@ namespace glz
    template <opts Opts, class T, string_viewable Buffer>
    [[nodiscard]] inline parse_error read(T& value, Buffer&& buffer) noexcept
    {
-      context ctx{};
+      read_context ctx{};
       return read<Opts>(value, std::forward<Buffer>(buffer), ctx);
    }
 }

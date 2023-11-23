@@ -5260,7 +5260,7 @@ suite whitespace_testing = [] {
    "whitespace error"_test = [] {
       std::string_view buffer{"{\"0\"/\n/"};
       my_struct value{};
-      glz::context ctx{};
+      glz::read_context ctx{};
       expect(glz::read_json(value, buffer) == glz::error_code::unknown_key);
    };
 };

@@ -45,7 +45,7 @@ namespace glz
    template <class T>
    inline parse_error read_file(T& value, const sv file_name, auto&& buffer) noexcept
    {
-      context ctx{};
+      read_context ctx{};
       ctx.current_file = file_name;
 
       std::filesystem::path path{file_name};
@@ -77,7 +77,7 @@ namespace glz
    template <class T>
    [[nodiscard]] inline write_error write_file(T& value, const sv file_name, auto&& buffer) noexcept
    {
-      context ctx{};
+      write_context ctx{};
       ctx.current_file = file_name;
 
       std::filesystem::path path{file_name};

@@ -47,7 +47,7 @@ namespace glz
    template <opts Opts, class T, output_buffer Buffer>
    inline void write(T&& value, Buffer& buffer) noexcept
    {
-      context ctx{};
+      write_context ctx{};
       write<Opts>(std::forward<T>(value), buffer, ctx);
    }
 
@@ -62,7 +62,7 @@ namespace glz
    template <opts Opts, class T, raw_buffer Buffer>
    inline size_t write(T&& value, Buffer&& buffer) noexcept
    {
-      context ctx{};
+      write_context ctx{};
       return write<Opts>(std::forward<T>(value), std::forward<Buffer>(buffer), ctx);
    }
 

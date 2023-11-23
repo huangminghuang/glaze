@@ -267,7 +267,7 @@ namespace glz
    template <class T, class Buffer>
    [[nodiscard]] inline auto read_ndjson(T& value, Buffer&& buffer)
    {
-      context ctx{};
+      read_context ctx{};
       return read<opts{.format = ndjson}>(value, std::forward<Buffer>(buffer), ctx);
    }
 
@@ -275,7 +275,7 @@ namespace glz
    [[nodiscard]] inline expected<T, parse_error> read_ndjson(Buffer&& buffer)
    {
       T value{};
-      context ctx{};
+      read_context ctx{};
       const auto ec = read<opts{.format = ndjson}>(value, std::forward<Buffer>(buffer), ctx);
       if (ec == error_code::none) {
          return value;
@@ -286,7 +286,7 @@ namespace glz
    template <auto Opts = opts{.format = ndjson}, class T>
    [[nodiscard]] inline parse_error read_file_ndjson(T& value, const sv file_name)
    {
-      context ctx{};
+      read_context ctx{};
       ctx.current_file = file_name;
 
       std::string buffer;
