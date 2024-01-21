@@ -86,7 +86,7 @@ namespace glz
 
    // Runtime context for configuration
    // We do not template the context on iterators so that it can be easily shared across buffer implementations
-   struct context final
+   struct context
    {
       // INTERNAL USE
       uint32_t indentation_level{};
@@ -96,5 +96,5 @@ namespace glz
    };
 
    template <class T>
-   concept is_context = std::same_as<std::decay_t<T>, context>;
+   concept is_context = std::derived_from<std::decay_t<T>, context>;
 }
